@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Stethoscope } from "lucide-react";
 
 import { cambiarEstadoPaciente } from "@/app/pacientes/[id]/actions";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,7 @@ export default async function FichaPacientePage({
 
   if (!paciente) redirect("/pacientes");
   const esAdmin = perfil?.role === "admin";
+  const esClinico = perfil?.role === "admin" || perfil?.role === "enfermera";
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-secondary/40 via-background to-background">
@@ -111,7 +112,15 @@ export default async function FichaPacientePage({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {esClinico && (
+              <Button asChild variant="outline">
+                <Link href={`/pacientes/${paciente.id}/evaluacion`}>
+                  <Stethoscope className="h-4 w-4" />
+                  Evaluación HBO
+                </Link>
+              </Button>
+            )}
             <Button asChild>
               <Link href={`/pacientes/${paciente.id}/editar`}>
                 <Pencil className="h-4 w-4" />
