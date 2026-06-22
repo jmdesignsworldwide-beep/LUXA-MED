@@ -68,9 +68,9 @@ const config: Config = {
         sm: "calc(var(--radius) - 8px)",
       },
       boxShadow: {
-        /* Sombras suaves, atmósfera de oxígeno */
-        soft: "0 4px 20px -4px hsl(208 60% 40% / 0.10)",
-        lift: "0 12px 40px -8px hsl(208 60% 40% / 0.18)",
+        /* Sombras suaves y difusas, atmósfera de oxígeno */
+        soft: "0 8px 30px -8px hsl(208 50% 35% / 0.12), 0 2px 8px -4px hsl(208 50% 35% / 0.08)",
+        lift: "0 24px 60px -14px hsl(208 55% 32% / 0.28), 0 8px 24px -10px hsl(208 50% 35% / 0.14)",
       },
       transitionTimingFunction: {
         /* Curva firma de "respiración" — la misma en todo el sistema */
