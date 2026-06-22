@@ -5,6 +5,7 @@ import { ArrowLeft, Pencil, Stethoscope } from "lucide-react";
 import { cambiarEstadoPaciente } from "@/app/pacientes/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CONTRAINDICACIONES_RELATIVAS } from "@/lib/constants/evaluacion";
 import { formatFecha } from "@/lib/format";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
@@ -61,6 +62,25 @@ export default async function FichaPacientePage({
   const esAdmin = perfil?.role === "admin";
   const esClinico = perfil?.role === "admin" || perfil?.role === "enfermera";
 
+  // Alertas clínicas (contraindicaciones de la última evaluación) — solo clínicos.
+  let ciAbsoluta = false;
+  let ciRelativas: string[] = [];
+  if (esClinico) {
+    const { data: ev } = await supabase
+      .from("evaluaciones_hbo")
+      .select("contraindicaciones")
+      .eq("paciente_id", params.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const c = (ev?.contraindicaciones ?? {}) as Record<string, unknown>;
+    ciAbsoluta = Boolean(c.neumotorax_no_tratado);
+    ciRelativas = CONTRAINDICACIONES_RELATIVAS.filter((o) => c[o.key]).map(
+      (o) => o.label,
+    );
+    if (c.otros) ciRelativas.push(String(c.otros));
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-secondary/40 via-background to-background">
       <div className="container max-w-4xl py-10">
@@ -71,6 +91,30 @@ export default async function FichaPacientePage({
           <ArrowLeft className="h-4 w-4" />
           Pacientes
         </Link>
+
+        {/* Zona de alertas clínicas (contraindicaciones) — solo personal clínico */}
+        {esClinico && (ciAbsoluta || ciRelativas.length > 0) && (
+          <div className="mt-6 space-y-3">
+            {ciAbsoluta && (
+              <div
+                role="alert"
+                className="rounded-2xl border-2 border-destructive bg-destructive/15 px-4 py-3 text-sm font-semibold text-destructive"
+              >
+                ⚠️ CONTRAINDICACIÓN ABSOLUTA: Neumotórax no tratado — la terapia
+                hiperbárica está contraindicada.
+              </div>
+            )}
+            {ciRelativas.length > 0 && (
+              <div
+                role="alert"
+                className="rounded-2xl border border-amber-500/50 bg-amber-500/15 px-4 py-3 text-sm font-medium text-amber-700 dark:text-amber-400"
+              >
+                ⚠️ Contraindicaciones relativas: {ciRelativas.join(", ")}.
+                Evaluar riesgo/beneficio.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Avisos */}
         {searchParams.actualizado === "1" && (
