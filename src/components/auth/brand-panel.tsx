@@ -22,25 +22,44 @@ export function BrandPanel() {
       {/* Degradado de marca: azul -> azul más profundo */}
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(204_72%_48%)] via-[hsl(208_73%_40%)] to-[hsl(212_78%_26%)]" />
 
-      {/* Atmósfera de oxígeno (cian sutil) que respira lento */}
+      {/* Sábana de luz que se desplaza en loop (el azul deja de estar quieto) */}
+      <motion.div
+        className="absolute inset-0 opacity-70"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 30% 25%, hsl(199 73% 55% / 0.45), transparent 60%), radial-gradient(55% 45% at 75% 80%, hsl(212 80% 30% / 0.55), transparent 60%)",
+          backgroundSize: "180% 180%",
+        }}
+        animate={
+          reduced
+            ? undefined
+            : { backgroundPosition: ["0% 0%", "100% 50%", "30% 100%", "0% 0%"] }
+        }
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* Orbes de luz aqua que flotan lento */}
       <div className="pointer-events-none absolute inset-0">
         <motion.div
-          className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-brand-cyan/25 blur-3xl"
+          className="absolute -left-20 -top-16 h-80 w-80 rounded-full bg-brand-cyan/30 blur-3xl"
           animate={
-            reduced
-              ? undefined
-              : { x: [0, 26, 0], y: [0, 18, 0], scale: [1, 1.1, 1] }
+            reduced ? undefined : { x: [0, 70, 20, 0], y: [0, 40, 80, 0], scale: [1, 1.15, 1.05, 1] }
           }
-          transition={{ duration: 22, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute -bottom-28 -right-20 h-[28rem] w-[28rem] rounded-full bg-white/10 blur-3xl"
+          className="absolute right-[-5rem] top-1/4 h-72 w-72 rounded-full bg-white/15 blur-3xl"
           animate={
-            reduced
-              ? undefined
-              : { x: [0, -24, 0], y: [0, -16, 0], scale: [1, 1.08, 1] }
+            reduced ? undefined : { x: [0, -60, -20, 0], y: [0, 50, -10, 0], scale: [1, 1.12, 1, 1] }
           }
-          transition={{ duration: 26, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-[-4rem] left-1/3 h-72 w-72 rounded-full bg-brand-cyan/20 blur-3xl"
+          animate={
+            reduced ? undefined : { x: [0, 40, -40, 0], y: [0, -40, 20, 0], scale: [1, 1.1, 1, 1] }
+          }
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
@@ -60,7 +79,7 @@ export function BrandPanel() {
 
       {/* Logo en tarjeta blanca — entrada una sola vez (fade + sube, resorte) */}
       <motion.div
-        initial={reduced ? false : { opacity: 0, y: 24 }}
+        initial={reduced ? false : { opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={SPRING}
         className="relative z-10"

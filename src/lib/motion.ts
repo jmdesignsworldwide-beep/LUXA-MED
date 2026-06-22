@@ -59,25 +59,25 @@ export const breathingPulse = {
   },
 };
 
-/** Resorte premium (suave, con asentamiento natural). */
+/** Resorte premium con rebote elegante visible. */
 export const SPRING = {
   type: "spring" as const,
-  stiffness: 220,
-  damping: 26,
-  mass: 0.9,
+  stiffness: 260,
+  damping: 20,
+  mass: 1,
 };
 
-/** Contenedor en cascada: hijos entran uno tras otro (~80 ms). */
+/** Contenedor en cascada: hijos entran uno tras otro (120 ms). */
 export const cascadeContainer: Variants = {
   hidden: {},
   show: {
-    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+    transition: { staggerChildren: 0.12, delayChildren: 0.1 },
   },
 };
 
-/** Elemento de la cascada: fundido + sube, con resorte. */
+/** Elemento de la cascada: fundido + sube notable (y:30), con resorte. */
 export const riseIn: Variants = {
-  hidden: { opacity: 0, y: 18 },
+  hidden: { opacity: 0, y: 30 },
   show: { opacity: 1, y: 0, transition: SPRING },
 };
 
