@@ -19,14 +19,12 @@ begin;
 insert into auth.users (id, instance_id, aud, role, email)
 values
   ('aaaaaaaa-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin.test@luxa.local'),
-  ('aaaaaaaa-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'medico.test@luxa.local'),
   ('aaaaaaaa-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'enfermera.test@luxa.local'),
   ('aaaaaaaa-0000-0000-0000-0000000000a4', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'recepcion.test@luxa.local');
 
 insert into public.user_profiles (id, role, nombre_completo)
 values
-  ('aaaaaaaa-0000-0000-0000-0000000000a1', 'admin',     'Admin de Prueba'),
-  ('aaaaaaaa-0000-0000-0000-0000000000a2', 'medico',    'Médico de Prueba'),
+  ('aaaaaaaa-0000-0000-0000-0000000000a1', 'admin',     'Admin de Prueba (Doctora)'),
   ('aaaaaaaa-0000-0000-0000-0000000000a3', 'enfermera', 'Enfermera de Prueba'),
   ('aaaaaaaa-0000-0000-0000-0000000000a4', 'recepcion', 'Recepción de Prueba');
 
@@ -77,9 +75,8 @@ begin
   for rec in
     select * from (values
       (1, 'admin',     'aaaaaaaa-0000-0000-0000-0000000000a1'::uuid),
-      (2, 'medico',    'aaaaaaaa-0000-0000-0000-0000000000a2'::uuid),
-      (3, 'enfermera', 'aaaaaaaa-0000-0000-0000-0000000000a3'::uuid),
-      (4, 'recepcion', 'aaaaaaaa-0000-0000-0000-0000000000a4'::uuid)
+      (2, 'enfermera', 'aaaaaaaa-0000-0000-0000-0000000000a3'::uuid),
+      (3, 'recepcion', 'aaaaaaaa-0000-0000-0000-0000000000a4'::uuid)
     ) as t(orden, rol, uid)
   loop
     execute 'set local role authenticated';
@@ -109,9 +106,8 @@ begin
   for rec in
     select * from (values
       (1, 'admin',     'aaaaaaaa-0000-0000-0000-0000000000a1'::uuid),
-      (2, 'medico',    'aaaaaaaa-0000-0000-0000-0000000000a2'::uuid),
-      (3, 'enfermera', 'aaaaaaaa-0000-0000-0000-0000000000a3'::uuid),
-      (4, 'recepcion', 'aaaaaaaa-0000-0000-0000-0000000000a4'::uuid)
+      (2, 'enfermera', 'aaaaaaaa-0000-0000-0000-0000000000a3'::uuid),
+      (3, 'recepcion', 'aaaaaaaa-0000-0000-0000-0000000000a4'::uuid)
     ) as t(orden, rol, uid)
   loop
     execute 'set local role authenticated';
@@ -162,10 +158,8 @@ end
 $$;
 
 -- --- Resultado legible -----------------------------------------------------
--- Esperado:
+-- Esperado (3 roles; ya NO existe 'medico'):
 --   admin     -> ve todo; ESCRIBIR diagnóstico = PERMITIDO; sesión = PERMITIDO
---   medico    -> ve clínico; ESCRIBIR diagnóstico = PERMITIDO; sesión = PERMITIDO;
---                empleados 0, audit 0
 --   enfermera -> ve clínico (historia/sesiones); ESCRIBIR diagnóstico = DENEGADO;
 --                REGISTRAR sesión = PERMITIDO; empleados 0, audit 0
 --   recepcion -> pacientes sí; HISTORIA 0, SESIONES 0, empleados 0, audit 0;

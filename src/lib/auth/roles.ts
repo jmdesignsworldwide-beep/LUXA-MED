@@ -10,7 +10,6 @@ import { z } from "zod";
  */
 export const ROLES = {
   admin: "Administrador",
-  medico: "Médico",
   enfermera: "Enfermera",
   recepcion: "Recepción",
 } as const;
@@ -22,10 +21,10 @@ export const ROLE_VALUES = Object.keys(ROLES) as [Role, ...Role[]];
 export const roleSchema = z.enum(ROLE_VALUES);
 
 /** Personal clínico: ve diagnósticos, historia clínica y sesiones. */
-export const CLINICAL_ROLES: Role[] = ["admin", "medico", "enfermera"];
+export const CLINICAL_ROLES: Role[] = ["admin", "enfermera"];
 
-/** Quién ESCRIBE diagnósticos / historia clínica: solo médico y admin. */
-export const DIAGNOSIS_WRITER_ROLES: Role[] = ["admin", "medico"];
+/** Quién ESCRIBE diagnósticos / historia clínica: solo admin (la doctora-dueña). */
+export const DIAGNOSIS_WRITER_ROLES: Role[] = ["admin"];
 
 /** Recepción NUNCA está aquí: no ve diagnósticos ni historia clínica. */
 export function isClinicalRole(role: Role): boolean {
