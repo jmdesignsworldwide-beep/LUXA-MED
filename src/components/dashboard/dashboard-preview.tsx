@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { CalendarDays, FileText, Plus, Users, Wind } from "lucide-react";
 
@@ -22,24 +23,28 @@ const tarjetas = [
     titulo: "Pacientes",
     valor: "—",
     desc: "Registro y altas (demográfico).",
+    href: "/pacientes",
   },
   {
     icon: Wind,
     titulo: "Sesiones de hoy",
     valor: "—",
     desc: "Terapia hiperbárica: SpO2, ATA, evolución.",
+    href: undefined,
   },
   {
     icon: FileText,
     titulo: "Historia clínica",
     valor: "—",
     desc: "Diagnósticos (acceso por rol).",
+    href: undefined,
   },
   {
     icon: CalendarDays,
     titulo: "Agenda",
     valor: "—",
     desc: "Citas y disponibilidad.",
+    href: undefined,
   },
 ];
 
@@ -95,14 +100,8 @@ export function DashboardPreview({ nombre }: { nombre: string }) {
 
         {/* Tarjetas */}
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {tarjetas.map((t, i) => (
-            <motion.div
-              key={t.titulo}
-              variants={fadeUp}
-              initial="hidden"
-              animate="show"
-              custom={0.2 + i * 0.08}
-            >
+          {tarjetas.map((t, i) => {
+            const card = (
               <Card className="h-full transition-all duration-300 ease-breath hover:-translate-y-1 hover:shadow-lift">
                 <CardHeader>
                   <div className="flex h-11 w-11 items-center justify-center rounded-pill bg-accent text-primary">
@@ -117,8 +116,25 @@ export function DashboardPreview({ nombre }: { nombre: string }) {
                   </span>
                 </CardContent>
               </Card>
-            </motion.div>
-          ))}
+            );
+            return (
+              <motion.div
+                key={t.titulo}
+                variants={fadeUp}
+                initial="hidden"
+                animate="show"
+                custom={0.2 + i * 0.08}
+              >
+                {t.href ? (
+                  <Link href={t.href} className="block h-full">
+                    {card}
+                  </Link>
+                ) : (
+                  card
+                )}
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </main>
