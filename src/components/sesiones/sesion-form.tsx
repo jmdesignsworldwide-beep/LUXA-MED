@@ -49,10 +49,12 @@ function GuardarButton() {
 export function SesionForm({
   pacienteId,
   citas,
+  defaultCitaId,
   defaults,
 }: {
   pacienteId: string;
   citas: CitaOpt[];
+  defaultCitaId: string;
   defaults: { numero_sesion: number; total_sesiones: string; presion_ata: string };
 }) {
   const [state, formAction] = useFormState<SesionState, FormData>(
@@ -70,13 +72,16 @@ export function SesionForm({
       )}
 
       <Bloque titulo="Vínculo y número de sesión">
-        <Campo label="Cita (opcional)">
-          <Select name="cita_id" defaultValue="">
-            <option value="">Sin cita asociada</option>
+        <Campo label="Cita del paciente">
+          <Select name="cita_id" defaultValue={defaultCitaId}>
             {citas.map((c) => (
               <option key={c.id} value={c.id}>{c.label}</option>
             ))}
+            <option value="">Sin cita asociada (walk-in)</option>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Al guardar, la cita programada queda marcada como completada.
+          </p>
           <ErrorMsg id="cita_id" errors={errors} />
         </Campo>
         <div className="grid grid-cols-2 gap-3">

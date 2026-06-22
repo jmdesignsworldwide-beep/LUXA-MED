@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { SesionForm } from "@/components/sesiones/sesion-form";
-import { formatFecha, formatHoraRD } from "@/lib/format";
+import { formatFecha, formatHoraRD, hoyRD } from "@/lib/format";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -35,17 +35,27 @@ export default async function NuevaSesionPage({
     .maybeSingle();
   if (!paciente) redirect("/pacientes");
 
-  // Citas del paciente (para vincular)
+  // Citas PROGRAMADAS del paciente (para vincular), de hoy y próximas.
+  const hoy = hoyRD();
   const { data: citasRaw } = await supabase
     .from("citas")
-    .select("id, inicio, estado")
+    .select("id, inicio")
     .eq("paciente_id", params.id)
-    .order("inicio", { ascending: false })
+    .eq("estado", "programada")
+    .order("inicio", { ascending: true })
     .limit(50);
-  const citas = (citasRaw ?? []).map((c) => ({
-    id: c.id,
-    label: `${formatFecha(c.inicio)} ${formatHoraRD(c.inicio)} · ${c.estado}`,
-  }));
+  const citas = (citasRaw ?? []).map((c) => {
+    const fechaRD = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Santo_Domingo",
+    }).format(new Date(c.inicio));
+    const esHoy = fechaRD === hoy;
+    return {
+      id: c.id,
+      label: `${formatFecha(c.inicio)} ${formatHoraRD(c.inicio)}${esHoy ? " · HOY" : ""}`,
+      esHoy,
+    };
+  });
+  const defaultCitaId = citas.find((c) => c.esHoy)?.id ?? "";
 
   // Autollenado desde la evaluación + conteo de sesiones previas
   const { data: evaluacion } = await supabase
@@ -83,7 +93,12 @@ export default async function NuevaSesionPage({
         <p className="mt-1 text-sm text-muted-foreground">{paciente.nombre_completo}</p>
 
         <div className="mt-8 rounded-capsule border border-border/70 bg-card p-6 shadow-soft sm:p-8">
-          <SesionForm pacienteId={params.id} citas={citas} defaults={defaults} />
+          <SesionForm
+            pacienteId={params.id}
+            citas={citas}
+            defaultCitaId={defaultCitaId}
+            defaults={defaults}
+          />
         </div>
       </div>
     </main>

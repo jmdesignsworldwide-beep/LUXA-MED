@@ -38,6 +38,26 @@ export async function registrarSesion(
   if (!user) redirect("/login");
 
   const d = parsed.data;
+
+  // Si se vincula a una cita, solo se permite si está PROGRAMADA.
+  if (d.cita_id) {
+    const { data: cita } = await supabase
+      .from("citas")
+      .select("estado")
+      .eq("id", d.cita_id)
+      .maybeSingle();
+    if (!cita) {
+      return { ok: false, message: "La cita seleccionada no existe." };
+    }
+    if (cita.estado !== "programada") {
+      return {
+        ok: false,
+        message:
+          "Esa cita no está programada (cancelada, no asistió o ya completada). No se puede registrar una sesión sobre ella.",
+      };
+    }
+  }
+
   const { error } = await supabase.from("sesiones").insert({
     paciente_id: pacienteId,
     cita_id: d.cita_id ?? null,
@@ -59,6 +79,16 @@ export async function registrarSesion(
       return { ok: false, message: "No tienes permiso para registrar sesiones." };
     }
     return { ok: false, message: "No se pudo registrar la sesión. Inténtalo de nuevo." };
+  }
+
+  // Cierra el ciclo: la cita programada queda "completada" automáticamente.
+  if (d.cita_id) {
+    await supabase
+      .from("citas")
+      .update({ estado: "completada" })
+      .eq("id", d.cita_id)
+      .eq("estado", "programada");
+    revalidatePath("/agenda");
   }
 
   revalidatePath(`/pacientes/${pacienteId}`);
