@@ -76,7 +76,7 @@ export function WelcomeScreen({
               width={1172}
               height={798}
               priority
-              className="h-auto w-44 sm:w-56"
+              className="h-auto w-52 sm:w-64"
             />
           </div>
         </motion.div>
@@ -88,22 +88,31 @@ export function WelcomeScreen({
           transition={breath(DURATION.base, 0.35)}
           className="mt-10 leading-none"
         >
-          <div className="bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-cyan bg-clip-text text-5xl font-extrabold tracking-tight text-transparent sm:text-6xl">
+          <div className="bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-cyan bg-clip-text font-display text-5xl font-extrabold tracking-tight text-transparent sm:text-6xl">
             LUXAMED
           </div>
-          <div className="mt-2 text-sm font-semibold uppercase tracking-[0.45em] text-brand-cyan/80 sm:text-base">
+          <div className="mt-2 font-display text-sm font-semibold uppercase tracking-[0.45em] text-brand-cyan/80 sm:text-base">
             Hiperbárica
           </div>
         </motion.div>
 
-        {/* Saludo con blur-to-focus */}
-        <BlurInText
-          as="p"
-          delay={0.7}
-          className="mt-8 text-lg text-white/80 sm:text-xl"
-        >
-          Bienvenida, <span className="font-semibold text-white">{nombre}</span>
-        </BlurInText>
+        {/* Saludo — protagonista, con blur-to-focus, misma familia display */}
+        <div className="mt-10 font-display leading-none">
+          <BlurInText
+            as="p"
+            delay={0.6}
+            className="text-xl font-medium text-white/70 sm:text-2xl"
+          >
+            Bienvenida,
+          </BlurInText>
+          <BlurInText
+            as="p"
+            delay={0.8}
+            className="mt-2 text-5xl font-extrabold tracking-tight text-white sm:text-7xl"
+          >
+            {nombre}
+          </BlurInText>
+        </div>
       </div>
     </motion.div>
   );
