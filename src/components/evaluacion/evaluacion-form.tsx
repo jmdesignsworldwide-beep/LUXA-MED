@@ -114,10 +114,16 @@ function Checks({
   );
 }
 
-function GuardarButton() {
+function GuardarButton({ onClick }: { onClick: () => void }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="vital" size="lg" disabled={pending}>
+    <Button
+      type="button"
+      variant="vital"
+      size="lg"
+      disabled={pending}
+      onClick={onClick}
+    >
       {pending ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -158,8 +164,38 @@ export function EvaluacionForm({
     return (p / (t * t)).toFixed(1);
   }, [peso, talla]);
 
+  // Contraindicaciones reactivas (alertas en vivo)
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const [ciAbsoluta, setCiAbsoluta] = React.useState<boolean>(
+    Boolean(e?.contraindicaciones?.neumotorax_no_tratado),
+  );
+  const [ciRel, setCiRel] = React.useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const o of CONTRAINDICACIONES_RELATIVAS)
+      init[o.key] = Boolean(e?.contraindicaciones?.[o.key]);
+    return init;
+  });
+  const [candidato, setCandidato] = React.useState<string>(
+    e?.es_candidato === true ? "si" : e?.es_candidato === false ? "no" : "",
+  );
+  const [showConfirm, setShowConfirm] = React.useState(false);
+
+  const relativasActivas = CONTRAINDICACIONES_RELATIVAS.filter(
+    (o) => ciRel[o.key],
+  );
+
+  function enviar() {
+    setShowConfirm(false);
+    formRef.current?.requestSubmit();
+  }
+  function intentarGuardar() {
+    // El software registra, el médico decide: solo pide confirmación extra.
+    if (ciAbsoluta && candidato === "si") setShowConfirm(true);
+    else enviar();
+  }
+
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} ref={formRef} className="space-y-4">
       {!canEdit && (
         <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
           Estás viendo la evaluación en modo lectura. Solo la doctora (admin)
@@ -271,13 +307,35 @@ export function EvaluacionForm({
           </div>
         </Seccion>
 
-        <Seccion titulo="6. Contraindicaciones">
+        <Seccion titulo="6. Contraindicaciones" abierto>
+          {/* Alertas en vivo según gravedad */}
+          {ciAbsoluta && (
+            <div
+              role="alert"
+              className="mb-4 rounded-2xl border-2 border-destructive bg-destructive/15 px-4 py-3 text-sm font-semibold text-destructive"
+            >
+              ⚠️ CONTRAINDICACIÓN ABSOLUTA — La terapia hiperbárica está
+              contraindicada. Revise antes de aprobar.
+            </div>
+          )}
+          {relativasActivas.length > 0 && (
+            <div
+              role="alert"
+              className="mb-4 rounded-2xl border border-amber-500/50 bg-amber-500/15 px-4 py-3 text-sm font-medium text-amber-700 dark:text-amber-400"
+            >
+              ⚠️ Precaución: contraindicación relativa (
+              {relativasActivas.map((o) => o.label).join(", ")}) — evaluar
+              riesgo/beneficio.
+            </div>
+          )}
+
           <label className="flex items-center gap-2 text-sm font-medium text-destructive">
             <input
               type="checkbox"
               name="ci_neumotorax_no_tratado"
               value="1"
-              defaultChecked={Boolean(e?.contraindicaciones?.neumotorax_no_tratado)}
+              checked={ciAbsoluta}
+              onChange={(ev) => setCiAbsoluta(ev.target.checked)}
               className="h-4 w-4 rounded border-input"
             />
             Absoluta: Neumotórax no tratado
@@ -285,11 +343,23 @@ export function EvaluacionForm({
           <p className="mb-2 mt-4 text-xs uppercase tracking-wide text-muted-foreground">
             Relativas
           </p>
-          <Checks
-            prefijo="ci_"
-            opciones={CONTRAINDICACIONES_RELATIVAS}
-            valores={e?.contraindicaciones}
-          />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {CONTRAINDICACIONES_RELATIVAS.map((o) => (
+              <label key={o.key} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name={`ci_${o.key}`}
+                  value="1"
+                  checked={!!ciRel[o.key]}
+                  onChange={(ev) =>
+                    setCiRel((s) => ({ ...s, [o.key]: ev.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-input text-primary"
+                />
+                {o.label}
+              </label>
+            ))}
+          </div>
           <div className="mt-4">
             <Campo label="Otras contraindicaciones" full>
               <Input name="ci_otros" defaultValue={e?.contraindicaciones?.otros ?? ""} />
@@ -384,9 +454,8 @@ export function EvaluacionForm({
             <Campo label="¿Es candidato a HBO?">
               <Select
                 name="es_candidato"
-                defaultValue={
-                  e?.es_candidato === true ? "si" : e?.es_candidato === false ? "no" : ""
-                }
+                value={candidato}
+                onChange={(ev) => setCandidato(ev.target.value)}
               >
                 <option value="">—</option>
                 <option value="si">Sí</option>
@@ -440,10 +509,43 @@ export function EvaluacionForm({
 
       {canEdit && (
         <div className="flex items-center gap-3 pt-2">
-          <GuardarButton />
+          <GuardarButton onClick={intentarGuardar} />
           <Button asChild variant="ghost">
             <Link href={`/pacientes/${pacienteId}`}>Volver a la ficha</Link>
           </Button>
+        </div>
+      )}
+
+      {/* Confirmación extra: contraindicación absoluta + "Sí es candidato".
+          NUNCA bloquea — el médico decide. */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+            onClick={() => setShowConfirm(false)}
+          />
+          <div className="relative z-10 w-full max-w-md rounded-capsule border border-border bg-card p-6 shadow-lift">
+            <h2 className="text-lg font-semibold text-destructive">
+              Contraindicación absoluta registrada
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Hay una contraindicación <strong>ABSOLUTA</strong> marcada y aun
+              así seleccionaste “Sí es candidato”. El sistema registra; usted
+              decide. ¿Confirma que el paciente es candidato?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowConfirm(false)}
+              >
+                Revisar de nuevo
+              </Button>
+              <Button type="button" variant="destructive" onClick={enviar}>
+                Sí, confirmo y guardo
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </form>
