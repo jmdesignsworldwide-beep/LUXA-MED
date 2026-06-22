@@ -24,4 +24,4 @@ values
   ('Ramón Emilio Guzmán', '012-0334455-2', '1961-06-21', 'M', '809-555-0455', 'ramon.guzman@correo.do', 'C/ Libertad 3, Barahona', 'A+', 'Penicilina', 'Teresa Guzmán', '809-555-0456', 'SeNaSa', 'SNS-014477', false),
   ('Wendy Carolina Ramírez', '402-3344556-7', '1998-04-11', 'F', '849-555-0490', 'wendy.ramirez@correo.do', 'Av. Winston Churchill 15, Santo Domingo', 'O+', 'Ninguna', 'Gabriel Ramírez', '849-555-0491', 'Mapfre Salud', 'MAP-77310', true),
   ('José Miguel Castillo', '001-7788990-1', '1972-10-09', 'M', '809-555-0521', 'jose.castillo@correo.do', 'C/ Padre Billini 60, Santo Domingo', 'B+', 'Ibuprofeno', 'Dolores Castillo', '809-555-0522', 'ARS Reservas', 'RES-20098', true)
-on conflict (cedula) do nothing;
+on conflict (cedula) where cedula is not null do nothing;
