@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
+import { cambiarEstadoCita } from "@/app/agenda/actions";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DIAS_SEMANA,
@@ -38,7 +40,12 @@ type CitaRow = {
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: { fecha?: string; creada?: string };
+  searchParams: {
+    fecha?: string;
+    creada?: string;
+    actualizada?: string;
+    error?: string;
+  };
 }) {
   if (!getSupabaseServerConfig().configured) redirect("/login");
   const supabase = createClient();
@@ -94,9 +101,14 @@ export default async function AgendaPage({
           </Button>
         </div>
 
-        {searchParams.creada === "1" && (
+        {(searchParams.creada === "1" || searchParams.actualizada === "1") && (
           <div className="mt-6 rounded-2xl border border-brand-cyan/30 bg-brand-cyan/10 px-4 py-3 text-sm font-medium text-primary">
-            ✓ Cita agendada correctamente.
+            ✓ {searchParams.creada === "1" ? "Cita agendada" : "Cita actualizada"} correctamente.
+          </div>
+        )}
+        {searchParams.error === "estado" && (
+          <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            No se pudo actualizar la cita. Inténtalo de nuevo.
           </div>
         )}
 
@@ -158,13 +170,39 @@ export default async function AgendaPage({
                     )}
                   </div>
                 </div>
-                <span
-                  className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-medium ${
-                    estadoClase[c.estado] ?? "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {ESTADO_CITA_LABEL[c.estado] ?? c.estado}
-                </span>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <span
+                    className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-medium ${
+                      estadoClase[c.estado] ?? "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {ESTADO_CITA_LABEL[c.estado] ?? c.estado}
+                  </span>
+
+                  {c.estado === "programada" && (
+                    <>
+                      <form action={cambiarEstadoCita.bind(null, c.id, "completada", fecha)}>
+                        <Button type="submit" size="sm" variant="outline">
+                          Completada
+                        </Button>
+                      </form>
+                      <form action={cambiarEstadoCita.bind(null, c.id, "no_asistio", fecha)}>
+                        <Button type="submit" size="sm" variant="outline">
+                          No asistió
+                        </Button>
+                      </form>
+                      <ConfirmDialog
+                        triggerLabel="Cancelar"
+                        triggerVariant="ghost"
+                        title="¿Cancelar cita?"
+                        description="La cita quedará cancelada y ese horario se liberará para otra cita."
+                        confirmLabel="Sí, cancelar"
+                        confirmVariant="destructive"
+                        action={cambiarEstadoCita.bind(null, c.id, "cancelada", fecha)}
+                      />
+                    </>
+                  )}
+                </div>
               </div>
             ))
           )}
