@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { CalendarDays, FileText, Plus, Users, Wind } from "lucide-react";
 
+import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -52,15 +53,13 @@ export function DashboardPreview({ nombre }: { nombre: string }) {
             <div className="rounded-pill bg-white p-1.5 shadow-soft">
               <Image
                 src="/luxamed-logo.jpeg"
-                alt="LUXAMED"
+                alt="LUXAMED Hiperbárica"
                 width={1172}
                 height={798}
                 className="h-7 w-auto"
               />
             </div>
-            <span className="text-sm font-semibold tracking-tight text-primary">
-              LUXA-MED
-            </span>
+            <Wordmark size="sm" />
           </div>
           <ThemeToggle />
         </div>

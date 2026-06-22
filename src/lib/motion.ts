@@ -1,7 +1,7 @@
 import type { Transition, Variants } from "framer-motion";
 
 /**
- * ADN de movimiento LUXA-MED — fuente única.
+ * ADN de movimiento LUXAMED — fuente única.
  *
  * Concepto "respiración": las cosas entran suaves y se asientan, como exhalar.
  * UNA sola curva + tiempos calmados, usados en TODO el sistema (bienvenida,

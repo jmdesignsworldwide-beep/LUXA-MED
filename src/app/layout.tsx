@@ -7,7 +7,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "LUXA-MED Hiperbárica",
+  title: "LUXAMED Hiperbárica",
   description: "Sistema de gestión para clínica hiperbárica — oxígeno y claridad.",
 };
 

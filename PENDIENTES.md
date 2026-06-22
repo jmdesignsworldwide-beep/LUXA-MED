@@ -9,7 +9,7 @@
 
 ## 1. Comprobante fiscal: NCF vs e-CF (facturación electrónica)
 
-**La duda:** ¿LUXA-MED emite comprobantes con **NCF** tradicional o ya entra
+**La duda:** ¿LUXAMED emite comprobantes con **NCF** tradicional o ya entra
 directo a **e-CF** (factura electrónica de la DGII)?
 
 - La DGII viene empujando la **facturación electrónica (e-CF)** con un

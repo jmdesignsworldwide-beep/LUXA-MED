@@ -1,4 +1,4 @@
-# SETUP — LUXA-MED
+# SETUP — LUXAMED
 
 Guía de configuración local, variables de entorno, migraciones y despliegue.
 
