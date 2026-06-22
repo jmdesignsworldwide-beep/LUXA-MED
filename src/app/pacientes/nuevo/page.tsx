@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function NuevoPacientePage() {
+  if (!getSupabaseServerConfig().configured) redirect("/login");
   const supabase = createClient();
   const {
     data: { user },
