@@ -42,6 +42,11 @@ values ('dddddddd-0000-0000-0000-0000000000d1',
         'cccccccc-0000-0000-0000-0000000000c1',
         'DIAGNÓSTICO CONFIDENCIAL — solo personal clínico');
 
+insert into public.sesiones (id, paciente_id, presion_ata, spo2_antes, spo2_despues, evolucion)
+values ('eeeeeeee-0000-0000-0000-0000000000f1',
+        'cccccccc-0000-0000-0000-0000000000c1',
+        2.40, 95, 99, 'Tolera bien la sesión');
+
 -- --- Tabla temporal para juntar los resultados del test -------------------
 create temporary table rls_resultados (
   orden     int,
@@ -60,9 +65,11 @@ declare
   rec       record;
   c_pac     int;
   c_hc      int;
+  c_ses     int;
   c_emp     int;
   c_audit   int;
   ok_hc     text;
+  ok_ses    text;
   ok_pac    text;
   v_pac     uuid := 'cccccccc-0000-0000-0000-0000000000c1';
 begin
@@ -84,6 +91,7 @@ begin
 
     select count(*) into c_pac   from public.pacientes;
     select count(*) into c_hc    from public.historia_clinica;
+    select count(*) into c_ses   from public.sesiones;
     select count(*) into c_emp   from public.empleados;
     select count(*) into c_audit from public.audit_log;
 
@@ -92,6 +100,7 @@ begin
     insert into rls_resultados values
       (rec.orden, rec.rol, 'VER pacientes (demográfico)',        c_pac::text || ' fila(s)'),
       (rec.orden, rec.rol, 'VER historia_clinica (diagnóstico)', c_hc::text || ' fila(s)'),
+      (rec.orden, rec.rol, 'VER sesiones (SpO2/ATA/evolución)',  c_ses::text || ' fila(s)'),
       (rec.orden, rec.rol, 'VER empleados (privado RRHH)',       c_emp::text || ' fila(s)'),
       (rec.orden, rec.rol, 'VER audit_log (bitácora)',           c_audit::text || ' fila(s)');
   end loop;
@@ -112,14 +121,24 @@ begin
       true
     );
 
-    -- ESCRIBIR historia_clinica (clínicos sí; recepción NO). Se deshace.
+    -- ESCRIBIR DIAGNÓSTICO en historia_clinica: solo médico/admin. Se deshace.
     begin
       insert into public.historia_clinica (paciente_id, diagnostico)
-      values (v_pac, 'intento de escritura por ' || rec.rol);
+      values (v_pac, 'intento de diagnóstico por ' || rec.rol);
       raise exception using errcode = 'PT001';  -- éxito -> deshacer
     exception
       when sqlstate 'PT001' then ok_hc := 'PERMITIDO';
       when others           then ok_hc := 'DENEGADO';
+    end;
+
+    -- REGISTRAR DATOS DE SESIÓN en sesiones: clínicos (incl. enfermera). Se deshace.
+    begin
+      insert into public.sesiones (paciente_id, presion_ata, spo2_antes, spo2_despues, evolucion)
+      values (v_pac, 2.0, 96, 98, 'sesión registrada por ' || rec.rol);
+      raise exception using errcode = 'PT001';  -- éxito -> deshacer
+    exception
+      when sqlstate 'PT001' then ok_ses := 'PERMITIDO';
+      when others           then ok_ses := 'DENEGADO';
     end;
 
     -- ESCRIBIR pacientes (todo el personal sí). Se deshace.
@@ -135,19 +154,22 @@ begin
     execute 'reset role';
 
     insert into rls_resultados values
-      (rec.orden, rec.rol, 'ESCRIBIR historia_clinica', ok_hc),
-      (rec.orden, rec.rol, 'ESCRIBIR pacientes',         ok_pac);
+      (rec.orden, rec.rol, 'ESCRIBIR diagnóstico (historia_clinica)', ok_hc),
+      (rec.orden, rec.rol, 'REGISTRAR sesión (sesiones)',             ok_ses),
+      (rec.orden, rec.rol, 'ESCRIBIR pacientes',                      ok_pac);
   end loop;
 end
 $$;
 
 -- --- Resultado legible -----------------------------------------------------
 -- Esperado:
---   admin     -> ve todo (1/1/1/varios), escribe historia y pacientes
---   medico    -> pacientes 1, historia 1, empleados 0, audit 0; escribe ambas
---   enfermera -> igual que médico
---   recepcion -> pacientes 1, HISTORIA 0, empleados 0, audit 0;
---                ESCRIBIR historia_clinica = DENEGADO; pacientes = PERMITIDO
+--   admin     -> ve todo; ESCRIBIR diagnóstico = PERMITIDO; sesión = PERMITIDO
+--   medico    -> ve clínico; ESCRIBIR diagnóstico = PERMITIDO; sesión = PERMITIDO;
+--                empleados 0, audit 0
+--   enfermera -> ve clínico (historia/sesiones); ESCRIBIR diagnóstico = DENEGADO;
+--                REGISTRAR sesión = PERMITIDO; empleados 0, audit 0
+--   recepcion -> pacientes sí; HISTORIA 0, SESIONES 0, empleados 0, audit 0;
+--                diagnóstico = DENEGADO; sesión = DENEGADO; pacientes = PERMITIDO
 select rol, prueba, resultado
 from rls_resultados
 order by orden, prueba;
