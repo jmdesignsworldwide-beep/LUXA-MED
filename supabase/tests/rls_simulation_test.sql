@@ -51,6 +51,10 @@ create temporary table rls_resultados (
 ) on commit drop;
 
 -- --- Recorre los 4 roles y mide qué ve / qué puede escribir ---------------
+-- Dos pasadas para que los conteos queden limpios:
+--   Pasada 1: solo LECTURAS (línea base, sin que nadie escriba todavía).
+--   Pasada 2: ESCRITURAS, cada intento se DESHACE (sentinel PT001) para no
+--             contaminar los conteos ni dejar datos.
 do $$
 declare
   rec       record;
@@ -62,6 +66,7 @@ declare
   ok_pac    text;
   v_pac     uuid := 'cccccccc-0000-0000-0000-0000000000c1';
 begin
+  -- ----------------------- PASADA 1: LECTURAS -----------------------------
   for rec in
     select * from (values
       (1, 'admin',     'aaaaaaaa-0000-0000-0000-0000000000a1'::uuid),
@@ -70,7 +75,6 @@ begin
       (4, 'recepcion', 'aaaaaaaa-0000-0000-0000-0000000000a4'::uuid)
     ) as t(orden, rol, uid)
   loop
-    -- Simular sesión de este rol
     execute 'set local role authenticated';
     perform set_config(
       'request.jwt.claims',
@@ -78,39 +82,61 @@ begin
       true
     );
 
-    -- LECTURAS (RLS decide cuántas filas ve)
     select count(*) into c_pac   from public.pacientes;
     select count(*) into c_hc    from public.historia_clinica;
     select count(*) into c_emp   from public.empleados;
     select count(*) into c_audit from public.audit_log;
 
-    -- ESCRITURA en historia_clinica (clínicos sí; recepción NO)
+    execute 'reset role';
+
+    insert into rls_resultados values
+      (rec.orden, rec.rol, 'VER pacientes (demográfico)',        c_pac::text || ' fila(s)'),
+      (rec.orden, rec.rol, 'VER historia_clinica (diagnóstico)', c_hc::text || ' fila(s)'),
+      (rec.orden, rec.rol, 'VER empleados (privado RRHH)',       c_emp::text || ' fila(s)'),
+      (rec.orden, rec.rol, 'VER audit_log (bitácora)',           c_audit::text || ' fila(s)');
+  end loop;
+
+  -- ----------------------- PASADA 2: ESCRITURAS ---------------------------
+  for rec in
+    select * from (values
+      (1, 'admin',     'aaaaaaaa-0000-0000-0000-0000000000a1'::uuid),
+      (2, 'medico',    'aaaaaaaa-0000-0000-0000-0000000000a2'::uuid),
+      (3, 'enfermera', 'aaaaaaaa-0000-0000-0000-0000000000a3'::uuid),
+      (4, 'recepcion', 'aaaaaaaa-0000-0000-0000-0000000000a4'::uuid)
+    ) as t(orden, rol, uid)
+  loop
+    execute 'set local role authenticated';
+    perform set_config(
+      'request.jwt.claims',
+      json_build_object('sub', rec.uid, 'role', 'authenticated')::text,
+      true
+    );
+
+    -- ESCRIBIR historia_clinica (clínicos sí; recepción NO). Se deshace.
     begin
       insert into public.historia_clinica (paciente_id, diagnostico)
       values (v_pac, 'intento de escritura por ' || rec.rol);
-      ok_hc := 'PERMITIDO';
-    exception when others then
-      ok_hc := 'DENEGADO';
+      raise exception using errcode = 'PT001';  -- éxito -> deshacer
+    exception
+      when sqlstate 'PT001' then ok_hc := 'PERMITIDO';
+      when others           then ok_hc := 'DENEGADO';
     end;
 
-    -- ESCRITURA en pacientes (todo el personal sí)
+    -- ESCRIBIR pacientes (todo el personal sí). Se deshace.
     begin
       insert into public.pacientes (nombre_completo)
       values ('alta por ' || rec.rol);
-      ok_pac := 'PERMITIDO';
-    exception when others then
-      ok_pac := 'DENEGADO';
+      raise exception using errcode = 'PT001';  -- éxito -> deshacer
+    exception
+      when sqlstate 'PT001' then ok_pac := 'PERMITIDO';
+      when others           then ok_pac := 'DENEGADO';
     end;
 
     execute 'reset role';
 
     insert into rls_resultados values
-      (rec.orden, rec.rol, 'VER pacientes (demográfico)',      c_pac::text || ' fila(s)'),
-      (rec.orden, rec.rol, 'VER historia_clinica (diagnóstico)', c_hc::text || ' fila(s)'),
-      (rec.orden, rec.rol, 'VER empleados (privado RRHH)',      c_emp::text || ' fila(s)'),
-      (rec.orden, rec.rol, 'VER audit_log (bitácora)',          c_audit::text || ' fila(s)'),
-      (rec.orden, rec.rol, 'ESCRIBIR historia_clinica',         ok_hc),
-      (rec.orden, rec.rol, 'ESCRIBIR pacientes',                ok_pac);
+      (rec.orden, rec.rol, 'ESCRIBIR historia_clinica', ok_hc),
+      (rec.orden, rec.rol, 'ESCRIBIR pacientes',         ok_pac);
   end loop;
 end
 $$;
