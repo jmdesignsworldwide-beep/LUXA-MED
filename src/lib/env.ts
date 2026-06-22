@@ -1,20 +1,16 @@
 import { z } from "zod";
 
 /**
- * Validación de variables de entorno con zod.
+ * Variables de entorno públicas (URL + ANON de Supabase). Públicas por diseño:
+ * van al navegador. La service_role NUNCA vive aquí.
  *
- * Solo exponemos al navegador la URL del proyecto y la ANON key (públicas por
- * diseño). La service_role NUNCA vive en el código del cliente ni en este
- * archivo: si en el futuro hace falta, va en una variable de servidor aparte
- * y se maneja fuera del repo.
+ * Diseño tolerante: NO lanzamos error al importar (eso tumbaba el sitio si
+ * faltaba una variable). Validamos, avisamos claro en logs, y exponemos
+ * `isSupabaseConfigured` para que cada consumidor falle de forma controlada.
  */
 const publicEnvSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z
-    .string()
-    .url("NEXT_PUBLIC_SUPABASE_URL debe ser una URL válida"),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
-    .string()
-    .min(20, "NEXT_PUBLIC_SUPABASE_ANON_KEY parece inválida"),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
 });
 
 const parsed = publicEnvSchema.safeParse({
@@ -22,15 +18,15 @@ const parsed = publicEnvSchema.safeParse({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 });
 
-if (!parsed.success) {
-  // Falla temprano y claro: sin entorno válido no arrancamos.
-  console.error(
-    "❌ Variables de entorno inválidas:",
+if (!parsed.success && typeof window === "undefined") {
+  console.warn(
+    "[env] Variables de Supabase ausentes o inválidas:",
     parsed.error.flatten().fieldErrors,
-  );
-  throw new Error(
-    "Faltan o son inválidas variables de entorno de Supabase. Revisa .env.local (usa .env.example como guía).",
   );
 }
 
-export const env = parsed.data;
+export const isSupabaseConfigured = parsed.success;
+
+export const env = parsed.success
+  ? parsed.data
+  : { NEXT_PUBLIC_SUPABASE_URL: "", NEXT_PUBLIC_SUPABASE_ANON_KEY: "" };
