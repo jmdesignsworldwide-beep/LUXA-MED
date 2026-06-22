@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 
-import { breath, DURATION } from "@/lib/motion";
+import { SPRING } from "@/lib/motion";
 
 /**
  * Panel de marca del login — nivel premium.
@@ -22,10 +22,26 @@ export function BrandPanel() {
       {/* Degradado de marca: azul -> azul más profundo */}
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(204_72%_48%)] via-[hsl(208_73%_40%)] to-[hsl(212_78%_26%)]" />
 
-      {/* Atmósfera de oxígeno (cian sutil) */}
+      {/* Atmósfera de oxígeno (cian sutil) que respira lento */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-brand-cyan/25 blur-3xl" />
-        <div className="absolute -bottom-28 -right-20 h-[28rem] w-[28rem] rounded-full bg-white/10 blur-3xl" />
+        <motion.div
+          className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-brand-cyan/25 blur-3xl"
+          animate={
+            reduced
+              ? undefined
+              : { x: [0, 26, 0], y: [0, 18, 0], scale: [1, 1.1, 1] }
+          }
+          transition={{ duration: 22, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute -bottom-28 -right-20 h-[28rem] w-[28rem] rounded-full bg-white/10 blur-3xl"
+          animate={
+            reduced
+              ? undefined
+              : { x: [0, -24, 0], y: [0, -16, 0], scale: [1, 1.08, 1] }
+          }
+          transition={{ duration: 26, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+        />
       </div>
 
       {/* Cápsula gigante semitransparente (silueta de la marca, apenas visible) */}
@@ -42,11 +58,11 @@ export function BrandPanel() {
         }}
       />
 
-      {/* Logo en tarjeta blanca — entrada una sola vez (fade + sube) */}
+      {/* Logo en tarjeta blanca — entrada una sola vez (fade + sube, resorte) */}
       <motion.div
-        initial={reduced ? false : { opacity: 0, y: 22 }}
+        initial={reduced ? false : { opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={breath(DURATION.cinematic)}
+        transition={SPRING}
         className="relative z-10"
       >
         <div className="rounded-capsule bg-white p-7 shadow-lift lg:p-12">
