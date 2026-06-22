@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 
+import { OxygenBubbles } from "@/components/auth/oxygen-bubbles";
 import { SPRING } from "@/lib/motion";
 
 /**
@@ -67,6 +68,9 @@ export function BrandPanel() {
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="h-[58%] w-[150%] rounded-pill border border-white/10 bg-white/[0.03] lg:h-[46%]" />
       </div>
+
+      {/* Burbujas de oxígeno (cámara hiperbárica) — sutiles, detrás del logo */}
+      <OxygenBubbles />
 
       {/* Grano finísimo (textura), para que el azul no se vea digital plano */}
       <div
