@@ -38,3 +38,22 @@ export function formatTelefonoRD(digits: string): string {
   if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
   return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
 }
+
+/** Hora en RD (ej. "09:00 a. m.") a partir de un timestamp. */
+export function formatHoraRD(value: string | Date): string {
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("es-DO", {
+    timeZone: "America/Santo_Domingo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+}
+
+/** Fecha de hoy en RD como YYYY-MM-DD. */
+export function hoyRD(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Santo_Domingo",
+  }).format(new Date());
+}
