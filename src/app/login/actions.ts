@@ -3,9 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { isSupabaseConfigured } from "@/lib/env";
 import { rateLimit } from "@/lib/rate-limit";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 import { loginSchema } from "@/lib/validation/auth";
 
 export type LoginState = { error: string } | undefined;
@@ -19,7 +18,7 @@ export async function iniciarSesion(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
-  if (!isSupabaseConfigured) {
+  if (!getSupabaseServerConfig().configured) {
     return { error: "El inicio de sesión no está disponible en este momento." };
   }
 

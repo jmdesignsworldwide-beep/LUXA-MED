@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PACIENTES_PAGE_SIZE } from "@/lib/constants/pacientes";
 import { formatFecha } from "@/lib/format";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,7 @@ export default async function PacientesPage({
 }: {
   searchParams: SearchParams;
 }) {
+  if (!getSupabaseServerConfig().configured) redirect("/login");
   const supabase = createClient();
   const {
     data: { user },
