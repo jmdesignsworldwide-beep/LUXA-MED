@@ -219,7 +219,12 @@ export default async function PacientesPage({
                       className="border-b border-border/40 transition-colors last:border-0 hover:bg-accent/40"
                     >
                       <td className="px-5 py-3 font-medium">
-                        {p.nombre_completo}
+                        <Link
+                          href={`/pacientes/${p.id}`}
+                          className="text-primary hover:underline"
+                        >
+                          {p.nombre_completo}
+                        </Link>
                       </td>
                       <td className="px-5 py-3 tabular-nums text-muted-foreground">
                         {p.cedula ?? "—"}

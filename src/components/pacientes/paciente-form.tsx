@@ -5,10 +5,7 @@ import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 
-import {
-  registrarPaciente,
-  type RegistroState,
-} from "@/app/pacientes/nuevo/actions";
+import { type RegistroState } from "@/app/pacientes/nuevo/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,14 +18,32 @@ import {
 } from "@/lib/constants/pacientes";
 import { formatCedula, formatTelefonoRD } from "@/lib/format";
 
-function ErrorMsg({ id, errors }: { id: string; errors?: Record<string, string[]> }) {
+export type PacienteDefaults = {
+  nombre_completo?: string;
+  cedula?: string;
+  fecha_nacimiento?: string;
+  sexo?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  tipo_sangre?: string;
+  alergias?: string;
+  contacto_emergencia_nombre?: string;
+  contacto_emergencia_telefono?: string;
+  ars?: string;
+  ars_numero_afiliado?: string;
+};
+
+function ErrorMsg({
+  id,
+  errors,
+}: {
+  id: string;
+  errors?: Record<string, string[]>;
+}) {
   const msg = errors?.[id]?.[0];
   if (!msg) return null;
-  return (
-    <p id={`${id}-error`} className="text-sm text-destructive">
-      {msg}
-    </p>
-  );
+  return <p className="text-sm text-destructive">{msg}</p>;
 }
 
 function Seccion({
@@ -48,7 +63,7 @@ function Seccion({
   );
 }
 
-function GuardarButton() {
+function GuardarButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="vital" size="lg" disabled={pending}>
@@ -58,23 +73,36 @@ function GuardarButton() {
           Guardando…
         </>
       ) : (
-        "Guardar paciente"
+        label
       )}
     </Button>
   );
 }
 
-export function PacienteForm() {
-  const [state, formAction] = useFormState<RegistroState, FormData>(
-    registrarPaciente,
-    { ok: false },
-  );
+/**
+ * Formulario único de paciente — reusable para crear y editar.
+ * `action` decide qué pasa al guardar; `defaults` precarga los valores.
+ */
+export function PacienteForm({
+  action,
+  defaults,
+  submitLabel = "Guardar paciente",
+}: {
+  action: (prev: RegistroState, formData: FormData) => Promise<RegistroState>;
+  defaults?: PacienteDefaults;
+  submitLabel?: string;
+}) {
+  const [state, formAction] = useFormState<RegistroState, FormData>(action, {
+    ok: false,
+  });
   const errors = state.errors;
 
-  // Máscaras controladas
-  const [cedula, setCedula] = React.useState("");
-  const [telefono, setTelefono] = React.useState("");
-  const [telEmergencia, setTelEmergencia] = React.useState("");
+  // Campos con máscara (controlados)
+  const [cedula, setCedula] = React.useState(defaults?.cedula ?? "");
+  const [telefono, setTelefono] = React.useState(defaults?.telefono ?? "");
+  const [telEmergencia, setTelEmergencia] = React.useState(
+    defaults?.contacto_emergencia_telefono ?? "",
+  );
 
   return (
     <form action={formAction} className="space-y-8">
@@ -87,11 +115,15 @@ export function PacienteForm() {
         </div>
       )}
 
-      {/* Identidad */}
       <Seccion titulo="Identidad">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="nombre_completo">Nombre completo *</Label>
-          <Input id="nombre_completo" name="nombre_completo" required />
+          <Input
+            id="nombre_completo"
+            name="nombre_completo"
+            defaultValue={defaults?.nombre_completo}
+            required
+          />
           <ErrorMsg id="nombre_completo" errors={errors} />
         </div>
 
@@ -111,13 +143,18 @@ export function PacienteForm() {
 
         <div className="space-y-2">
           <Label htmlFor="fecha_nacimiento">Fecha de nacimiento</Label>
-          <Input id="fecha_nacimiento" name="fecha_nacimiento" type="date" />
+          <Input
+            id="fecha_nacimiento"
+            name="fecha_nacimiento"
+            type="date"
+            defaultValue={defaults?.fecha_nacimiento}
+          />
           <ErrorMsg id="fecha_nacimiento" errors={errors} />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="sexo">Sexo</Label>
-          <Select id="sexo" name="sexo" defaultValue="">
+          <Select id="sexo" name="sexo" defaultValue={defaults?.sexo ?? ""}>
             <option value="">Selecciona…</option>
             {SEXO_OPCIONES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -129,7 +166,6 @@ export function PacienteForm() {
         </div>
       </Seccion>
 
-      {/* Contacto */}
       <Seccion titulo="Contacto">
         <div className="space-y-2">
           <Label htmlFor="telefono">Teléfono</Label>
@@ -146,22 +182,35 @@ export function PacienteForm() {
 
         <div className="space-y-2">
           <Label htmlFor="email">Correo</Label>
-          <Input id="email" name="email" type="email" placeholder="correo@ejemplo.do" />
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="correo@ejemplo.do"
+            defaultValue={defaults?.email}
+          />
           <ErrorMsg id="email" errors={errors} />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="direccion">Dirección</Label>
-          <Textarea id="direccion" name="direccion" />
+          <Textarea
+            id="direccion"
+            name="direccion"
+            defaultValue={defaults?.direccion}
+          />
           <ErrorMsg id="direccion" errors={errors} />
         </div>
       </Seccion>
 
-      {/* Médico básico */}
       <Seccion titulo="Médico básico">
         <div className="space-y-2">
           <Label htmlFor="tipo_sangre">Tipo de sangre</Label>
-          <Select id="tipo_sangre" name="tipo_sangre" defaultValue="">
+          <Select
+            id="tipo_sangre"
+            name="tipo_sangre"
+            defaultValue={defaults?.tipo_sangre ?? ""}
+          >
             <option value="">Selecciona…</option>
             {TIPOS_SANGRE.map((t) => (
               <option key={t} value={t}>
@@ -174,7 +223,12 @@ export function PacienteForm() {
 
         <div className="space-y-2">
           <Label htmlFor="alergias">Alergias</Label>
-          <Input id="alergias" name="alergias" placeholder="Ninguna / especificar" />
+          <Input
+            id="alergias"
+            name="alergias"
+            placeholder="Ninguna / especificar"
+            defaultValue={defaults?.alergias}
+          />
           <ErrorMsg id="alergias" errors={errors} />
         </div>
 
@@ -185,6 +239,7 @@ export function PacienteForm() {
           <Input
             id="contacto_emergencia_nombre"
             name="contacto_emergencia_nombre"
+            defaultValue={defaults?.contacto_emergencia_nombre}
           />
           <ErrorMsg id="contacto_emergencia_nombre" errors={errors} />
         </div>
@@ -205,11 +260,10 @@ export function PacienteForm() {
         </div>
       </Seccion>
 
-      {/* Seguro */}
       <Seccion titulo="Seguro">
         <div className="space-y-2">
           <Label htmlFor="ars">ARS</Label>
-          <Select id="ars" name="ars" defaultValue="">
+          <Select id="ars" name="ars" defaultValue={defaults?.ars ?? ""}>
             <option value="">Selecciona…</option>
             {ARS_OPCIONES.map((a) => (
               <option key={a} value={a}>
@@ -222,13 +276,17 @@ export function PacienteForm() {
 
         <div className="space-y-2">
           <Label htmlFor="ars_numero_afiliado">Número de afiliado</Label>
-          <Input id="ars_numero_afiliado" name="ars_numero_afiliado" />
+          <Input
+            id="ars_numero_afiliado"
+            name="ars_numero_afiliado"
+            defaultValue={defaults?.ars_numero_afiliado}
+          />
           <ErrorMsg id="ars_numero_afiliado" errors={errors} />
         </div>
       </Seccion>
 
       <div className="flex items-center gap-3 pt-2">
-        <GuardarButton />
+        <GuardarButton label={submitLabel} />
         <Button asChild variant="ghost">
           <Link href="/pacientes">Cancelar</Link>
         </Button>

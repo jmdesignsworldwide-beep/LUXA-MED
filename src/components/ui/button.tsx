@@ -14,6 +14,8 @@ const buttonVariants = cva(
         /* Naranja vital — SOLO acción principal / hito. Úsalo escaso. */
         vital:
           "bg-vital text-vital-foreground shadow-soft hover:shadow-lift hover:-translate-y-0.5 hover:scale-[1.02]",
+        destructive:
+          "bg-destructive text-destructive-foreground shadow-soft hover:shadow-lift hover:-translate-y-0.5",
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
