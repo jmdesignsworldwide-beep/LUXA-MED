@@ -44,7 +44,7 @@ const tarjetas = [
     titulo: "Agenda",
     valor: "—",
     desc: "Citas y disponibilidad.",
-    href: undefined,
+    href: "/agenda",
   },
 ];
 
