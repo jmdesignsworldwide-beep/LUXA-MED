@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AuroraBackground } from "@/components/auth/aurora-background";
+import { AuroraBackground } from "@/components/fx/aurora-background";
 import { BrandPanel } from "@/components/auth/brand-panel";
 import { LoginForm } from "@/components/auth/login-form";
 import { ThemeToggle } from "@/components/theme-toggle";
