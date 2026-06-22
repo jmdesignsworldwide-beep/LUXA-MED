@@ -1,41 +1,42 @@
 import { z } from "zod";
 
-import { uuidSchema } from "./common";
+const str = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : String(v).trim()),
+  z.string().optional(),
+);
+const num = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : Number(v)),
+  z.number().optional(),
+);
+const int = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : parseInt(String(v), 10)),
+  z.number().int().optional(),
+);
+const spo2 = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : parseInt(String(v), 10)),
+  z.number().int().min(0).max(100).optional(),
+);
+const citaId = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : v),
+  z.string().uuid().optional(),
+);
 
 /**
- * Validación server-side para datos de sesión de terapia hiperbárica.
- * La pueden registrar médico, enfermera y admin (NO recepción) — garantizado
- * por RLS. Aquí solo validamos forma y rangos clínicos.
+ * Validación server-side de una sesión de terapia hiperbárica.
+ * (Datos clínicos de terapia — los registra admin o enfermera, no recepción.)
  */
 export const sesionSchema = z.object({
-  paciente_id: uuidSchema,
-  presion_ata: z
-    .number()
-    .positive("La presión (ATA) debe ser mayor que 0")
-    .max(10, "Presión (ATA) fuera de rango")
-    .optional()
-    .nullable(),
-  duracion_min: z
-    .number()
-    .int()
-    .positive("La duración debe ser mayor que 0")
-    .optional()
-    .nullable(),
-  spo2_antes: z
-    .number()
-    .int()
-    .min(0)
-    .max(100, "SpO2 debe estar entre 0 y 100")
-    .optional()
-    .nullable(),
-  spo2_despues: z
-    .number()
-    .int()
-    .min(0)
-    .max(100, "SpO2 debe estar entre 0 y 100")
-    .optional()
-    .nullable(),
-  evolucion: z.string().trim().max(5000).optional().nullable(),
+  cita_id: citaId,
+  numero_sesion: int,
+  total_sesiones: int,
+  spo2_antes: spo2,
+  ta_antes: str,
+  fc_antes: int,
+  presion_ata: num,
+  duracion_min: int,
+  spo2_despues: spo2,
+  evolucion: str,
+  incidencias: str,
 });
 
 export type SesionInput = z.infer<typeof sesionSchema>;
