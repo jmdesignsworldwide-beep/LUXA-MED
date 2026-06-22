@@ -88,31 +88,25 @@ export function WelcomeScreen({
           transition={breath(DURATION.base, 0.35)}
           className="mt-10 leading-none"
         >
-          <div className="bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-cyan bg-clip-text font-display text-5xl font-extrabold tracking-tight text-transparent sm:text-6xl">
+          <div className="bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-cyan bg-clip-text text-5xl font-extrabold tracking-tight text-transparent sm:text-6xl">
             LUXAMED
           </div>
-          <div className="mt-2 font-display text-sm font-semibold uppercase tracking-[0.45em] text-brand-cyan/80 sm:text-base">
+          <div className="mt-2 text-sm font-semibold uppercase tracking-[0.45em] text-brand-cyan/80 sm:text-base">
             Hiperbárica
           </div>
         </motion.div>
 
-        {/* Saludo — protagonista, con blur-to-focus, misma familia display */}
-        <div className="mt-10 font-display leading-none">
-          <BlurInText
-            as="p"
-            delay={0.6}
-            className="text-xl font-medium text-white/70 sm:text-2xl"
-          >
-            Bienvenida,
-          </BlurInText>
-          <BlurInText
-            as="p"
-            delay={0.8}
-            className="mt-2 text-5xl font-extrabold tracking-tight text-white sm:text-7xl"
-          >
+        {/* Saludo con blur-to-focus — aumento ligero del nombre, discreto */}
+        <BlurInText
+          as="p"
+          delay={0.7}
+          className="mt-8 text-lg text-white/80 sm:text-xl"
+        >
+          Bienvenida,{" "}
+          <span className="text-2xl font-semibold text-white sm:text-3xl">
             {nombre}
-          </BlurInText>
-        </div>
+          </span>
+        </BlurInText>
       </div>
     </motion.div>
   );
