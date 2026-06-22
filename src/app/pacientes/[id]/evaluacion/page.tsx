@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { guardarEvaluacion } from "@/app/pacientes/[id]/evaluacion/actions";
 import { EvaluacionForm } from "@/components/evaluacion/evaluacion-form";
+import { FirmaConsentimiento } from "@/components/evaluacion/firma-consentimiento";
 import { formatFecha } from "@/lib/format";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
@@ -24,7 +25,7 @@ export default async function EvaluacionPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { guardado?: string };
+  searchParams: { guardado?: string; firmado?: string };
 }) {
   if (!getSupabaseServerConfig().configured) redirect("/login");
   const supabase = createClient();
@@ -58,6 +59,16 @@ export default async function EvaluacionPage({
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  let firma = null;
+  if (evaluacion) {
+    const { data } = await supabase
+      .from("firmas_consentimiento")
+      .select("tipo_firma, firma_texto, firmado_en, pdf_hash, paciente_nombre")
+      .eq("evaluacion_id", evaluacion.id)
+      .maybeSingle();
+    firma = data ?? null;
+  }
 
   const identidad = {
     nombre_completo: paciente.nombre_completo,
@@ -94,6 +105,11 @@ export default async function EvaluacionPage({
             ✓ Evaluación guardada.
           </div>
         )}
+        {searchParams.firmado === "1" && (
+          <div className="mt-6 rounded-2xl border border-brand-cyan/30 bg-brand-cyan/10 px-4 py-3 text-sm font-medium text-primary">
+            ✓ Consentimiento firmado y documento generado.
+          </div>
+        )}
 
         <div className="mt-6">
           <EvaluacionForm
@@ -103,6 +119,26 @@ export default async function EvaluacionPage({
             evaluacion={evaluacion}
             canEdit={canEdit}
           />
+        </div>
+
+        <div className="mt-10">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Consentimiento informado — Firma
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {firma
+              ? "Documento firmado (inmutable)."
+              : "Firma del paciente (con el dedo o tipográfica) para cerrar el documento."}
+          </p>
+          <div className="mt-4">
+            <FirmaConsentimiento
+              evaluacionId={evaluacion?.id ?? null}
+              pacienteId={params.id}
+              firma={firma}
+              canSign={canEdit}
+              evaluacionExiste={Boolean(evaluacion)}
+            />
+          </div>
         </div>
       </div>
     </main>
