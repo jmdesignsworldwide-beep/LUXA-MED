@@ -10,7 +10,7 @@ export const ARS_OPCIONES = [
   "ARS Reservas",
   "ARS Simag",
   "Otra",
-  "Ninguna",
+  "Sin seguro / Privado",
 ] as const;
 
 export const TIPOS_SANGRE = [
