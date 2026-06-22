@@ -2,7 +2,7 @@
 -- 0001  Extensiones, enum de roles y utilidades base
 -- =============================================================================
 -- Idempotente: se puede correr varias veces sin romper nada.
--- LUXA-MED — clínica hiperbárica (RD). Datos médicos: la seguridad es la base.
+-- LUXAMED — clínica hiperbárica (RD). Datos médicos: la seguridad es la base.
 -- =============================================================================
 
 -- gen_random_uuid() viene de pgcrypto (disponible en Supabase).

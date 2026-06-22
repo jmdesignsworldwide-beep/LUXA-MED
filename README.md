@@ -1,4 +1,4 @@
-# LUXA-MED
+# LUXAMED Hiperbárica
 
 Sistema de gestión para una **clínica hiperbárica** en República Dominicana.
 Maneja **datos médicos reales** — la seguridad (RLS + auditoría) es la columna
