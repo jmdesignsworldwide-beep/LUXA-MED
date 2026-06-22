@@ -11,7 +11,12 @@ import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = { q?: string; estado?: string; page?: string };
+type SearchParams = {
+  q?: string;
+  estado?: string;
+  page?: string;
+  creado?: string;
+};
 
 type PacienteRow = {
   id: string;
@@ -121,6 +126,15 @@ export default async function PacientesPage({
             </Link>
           </Button>
         </div>
+
+        {searchParams.creado === "1" && (
+          <div
+            role="status"
+            className="mt-6 rounded-2xl border border-brand-cyan/30 bg-brand-cyan/10 px-4 py-3 text-sm font-medium text-primary"
+          >
+            ✓ Paciente registrado correctamente.
+          </div>
+        )}
 
         {/* Buscador + filtro (GET, sin JS) */}
         <form method="get" className="mt-6 flex flex-col gap-3 sm:flex-row">

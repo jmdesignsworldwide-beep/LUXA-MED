@@ -72,6 +72,21 @@ trazabilidad.
 
 ---
 
+## 4. Pantalla de "cambiar contraseña" (usuarios)
+
+**Pendiente de construir:** una pantalla para que los usuarios (admin, enfermera,
+recepción) **cambien su contraseña** dentro del sistema. Hoy las contraseñas se
+manejan desde el panel de Supabase; falta la opción autoservicio en la app.
+
+- [ ] Pantalla "Cambiar contraseña" (con la contraseña actual + nueva).
+- [ ] Validación de fortaleza mínima.
+- [ ] (Opcional) flujo de "olvidé mi contraseña" por correo.
+
+> Recordatorio inmediato: cambiar la contraseña temporal del usuario admin de
+> prueba (`admin@luxamed.do`).
+
+---
+
 ## Estado
 
 | # | Tema | Estado | Responsable |
@@ -79,3 +94,4 @@ trazabilidad.
 | 1 | NCF vs e-CF | ⏳ Abierto | Marien + contador |
 | 2 | ITBIS en salud | ⏳ Abierto | Marien + contador |
 | 3 | Consentimiento Ley 172-13 | ⏳ Abierto | Marien + legal |
+| 4 | Pantalla cambiar contraseña | ⏳ Abierto | Construir más adelante |

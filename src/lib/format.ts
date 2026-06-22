@@ -23,9 +23,18 @@ export function formatRD(value: number | null | undefined): string {
   }).format(value);
 }
 
-/** Cédula 000-0000000-0 a partir de 11 dígitos. */
+/** Cédula 000-0000000-0 a partir de dígitos (para máscara mientras se escribe). */
 export function formatCedula(digits: string): string {
-  const clean = digits.replace(/\D/g, "").slice(0, 11);
-  if (clean.length !== 11) return digits;
-  return `${clean.slice(0, 3)}-${clean.slice(3, 10)}-${clean.slice(10)}`;
+  const d = digits.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 10) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 10)}-${d.slice(10)}`;
+}
+
+/** Teléfono RD 809-555-1234 a partir de dígitos (máscara mientras se escribe). */
+export function formatTelefonoRD(digits: string): string {
+  const d = digits.replace(/\D/g, "").slice(0, 10);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
 }
