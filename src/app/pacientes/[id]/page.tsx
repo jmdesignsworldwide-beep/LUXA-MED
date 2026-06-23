@@ -359,6 +359,7 @@ export default async function FichaPacientePage({
           <PortalEnlace
             pacienteId={paciente.id}
             pacienteNombre={paciente.nombre_completo}
+            telefono={paciente.telefono ?? null}
             tieneEnlace={Boolean(enlacePortal)}
             ultimoAcceso={enlacePortal?.ultimo_acceso ?? null}
           />
