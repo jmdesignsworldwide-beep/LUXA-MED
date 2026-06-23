@@ -9,7 +9,9 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-capsule border border-border/70 bg-card text-card-foreground shadow-soft",
+      // Hover premium ÚNICO para TODAS las tarjetas del sistema (misma elevación,
+      // sombra y curva). Fuente única: no repetir estas clases por instancia.
+      "rounded-capsule border border-border/70 bg-card text-card-foreground shadow-soft transition-all duration-300 ease-breath hover:-translate-y-1 hover:shadow-lift",
       className,
     )}
     {...props}

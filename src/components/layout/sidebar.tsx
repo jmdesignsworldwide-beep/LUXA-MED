@@ -62,15 +62,15 @@ export function Sidebar({
         className="fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-border/60 bg-card/80 backdrop-blur-xl md:flex"
       >
         {/* Logo */}
-        <div className="flex h-20 items-center gap-3 px-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill bg-white shadow-soft">
+        <div className="flex h-24 items-center gap-3 px-3">
+          <div className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl bg-white shadow-soft ring-1 ring-black/5">
             <Image
               src="/luxamed-logo.jpeg"
               alt="LUXAMED Hiperbárica"
               width={1172}
               height={798}
               priority
-              className="h-8 w-auto"
+              className="h-11 w-auto object-contain"
             />
           </div>
           <AnimatePresence>
@@ -81,7 +81,7 @@ export function Sidebar({
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.2 }}
               >
-                <Wordmark size="sm" />
+                <Wordmark size="md" />
               </motion.div>
             )}
           </AnimatePresence>

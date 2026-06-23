@@ -78,11 +78,7 @@ function StatCard({
 }) {
   const resalta = acento === "alerta" && Number(valor) > 0;
   const inner = (
-    <Card
-      className={`h-full p-6 transition-all duration-300 ease-breath ${
-        href ? "hover:-translate-y-1 hover:shadow-lift" : ""
-      } ${resalta ? "border-amber-500/50" : ""}`}
-    >
+    <Card className={`h-full p-6 ${resalta ? "border-amber-500/50" : ""}`}>
       <div className="flex items-start justify-between">
         <div
           className={`flex h-11 w-11 items-center justify-center rounded-pill ${
@@ -205,7 +201,7 @@ export function DashboardView(props: DashboardData) {
             <motion.div variants={riseIn} className="h-full">
               <Link href="/camara" className="block h-full">
                 <Card
-                  className={`h-full p-6 transition-all duration-300 ease-breath hover:-translate-y-1 hover:shadow-lift ${
+                  className={`h-full p-6 ${
                     camaraEstado !== "operativa" ? "border-amber-500/50" : ""
                   }`}
                 >
@@ -292,7 +288,7 @@ export function DashboardView(props: DashboardData) {
                     href={`/pacientes/${c.paciente_id}`}
                     className="block"
                   >
-                    <Card className="flex items-center justify-between p-4 transition-all duration-300 ease-breath hover:-translate-y-0.5 hover:shadow-lift">
+                    <Card className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-4">
                         <div className="w-28 shrink-0 text-sm font-semibold tabular-nums">
                           {formatHoraRD(c.inicio)}
