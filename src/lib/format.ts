@@ -57,3 +57,18 @@ export function hoyRD(): string {
     timeZone: "America/Santo_Domingo",
   }).format(new Date());
 }
+
+/**
+ * Número RD a formato internacional para wa.me (solo dígitos, con código de país
+ * 1): "18095551234". Devuelve null si no es un número dominicano válido.
+ */
+export function telefonoWhatsAppRD(
+  telefono: string | null | undefined,
+): string | null {
+  if (!telefono) return null;
+  let d = telefono.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  if (d.length !== 10) return null;
+  if (!["809", "829", "849"].includes(d.slice(0, 3))) return null;
+  return `1${d}`;
+}
