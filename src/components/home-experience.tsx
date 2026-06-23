@@ -4,21 +4,25 @@ import * as React from "react";
 import { AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 
-import { DashboardPreview } from "@/components/dashboard/dashboard-preview";
 import { WelcomeScreen } from "@/components/welcome/welcome-screen";
 
 const SESSION_KEY = "luxamed:welcome:shown";
 
 /**
- * Flujo de inicio: bienvenida cinematográfica (una vez por sesión) que revela
- * el dashboard con una cortina. A prueba de fallos: un temporizador máximo
- * garantiza que SIEMPRE se entre al sistema aunque algo falle.
+ * Telón de bienvenida cinematográfico (una vez por sesión) que se levanta para
+ * revelar el dashboard real (renderizado en el servidor y recibido como hijo).
+ * A prueba de fallos: un temporizador máximo garantiza que SIEMPRE se entra.
  *
- * Pruebas en preview: ?nombre=... cambia el saludo; ?welcome=1 fuerza verla.
+ * Pruebas en preview: ?welcome=1 fuerza verla de nuevo.
  */
-export function HomeExperience() {
+export function HomeExperience({
+  nombre,
+  children,
+}: {
+  nombre: string;
+  children: React.ReactNode;
+}) {
   const params = useSearchParams();
-  const nombre = params.get("nombre")?.trim() || "Marien";
   const force = params.get("welcome") === "1";
 
   const [showWelcome, setShowWelcome] = React.useState(false);
@@ -43,7 +47,7 @@ export function HomeExperience() {
 
   return (
     <>
-      <DashboardPreview nombre={nombre} />
+      {children}
       <AnimatePresence>
         {showWelcome && (
           <WelcomeScreen nombre={nombre} onDone={() => setShowWelcome(false)} />
