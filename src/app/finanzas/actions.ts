@@ -4,11 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
-import {
-  categoriaSchema,
-  gastoSchema,
-  ingresoSchema,
-} from "@/lib/validation/finanzas";
+import { gastoSchema, ingresoSchema } from "@/lib/validation/finanzas";
 
 export type FinanzasState = {
   ok: boolean;
@@ -40,10 +36,38 @@ export async function registrarGasto(
   }
   const { supabase, user } = await admin();
   const d = parsed.data;
+
+  // Crear categoría al vuelo si se eligió "nueva".
+  let categoriaId = d.categoria_id;
+  if (categoriaId === "nueva") {
+    if (!d.nueva_categoria) {
+      return { ok: false, message: "Escribe el nombre de la nueva categoría.", errors: { nueva_categoria: ["Requerido"] } };
+    }
+    // Reusar si ya existe (por nombre), si no, crearla.
+    const { data: existente } = await supabase
+      .from("categorias_gasto")
+      .select("id")
+      .ilike("nombre", d.nueva_categoria)
+      .maybeSingle();
+    if (existente?.id) {
+      categoriaId = existente.id as string;
+    } else {
+      const { data: creada, error: errCat } = await supabase
+        .from("categorias_gasto")
+        .insert({ nombre: d.nueva_categoria, created_by: user.id })
+        .select("id")
+        .single();
+      if (errCat || !creada) {
+        return { ok: false, message: "No se pudo crear la categoría nueva." };
+      }
+      categoriaId = creada.id as string;
+    }
+  }
+
   const { error } = await supabase.from("gastos").insert({
     monto: d.monto,
     fecha: d.fecha,
-    categoria_id: d.categoria_id,
+    categoria_id: categoriaId,
     nota: d.nota ?? null,
     origen: "manual",
     created_by: user.id,
@@ -85,55 +109,4 @@ export async function registrarIngreso(
   }
   revalidatePath("/finanzas");
   redirect("/finanzas?creado=ingreso");
-}
-
-/** Crear categoría de gasto. */
-export async function crearCategoria(
-  _prev: FinanzasState,
-  formData: FormData,
-): Promise<FinanzasState> {
-  if (!getSupabaseServerConfig().configured) return { ok: false, message: "Servicio no disponible." };
-  const parsed = categoriaSchema.safeParse({ nombre: formData.get("nombre") });
-  if (!parsed.success) {
-    return { ok: false, message: "Nombre de categoría inválido." };
-  }
-  const { supabase, user } = await admin();
-  const { error } = await supabase
-    .from("categorias_gasto")
-    .insert({ nombre: parsed.data.nombre, created_by: user.id });
-  if (error) {
-    if (error.code === "23505") return { ok: false, message: "Ya existe una categoría con ese nombre." };
-    if (error.code === "42501") return { ok: false, message: "Solo el administrador puede gestionar categorías." };
-    return { ok: false, message: "No se pudo crear la categoría." };
-  }
-  revalidatePath("/finanzas/categorias");
-  return { ok: true, message: "Categoría creada." };
-}
-
-/** Renombrar una categoría (no las del sistema). */
-export async function renombrarCategoria(id: string, formData: FormData): Promise<void> {
-  if (!getSupabaseServerConfig().configured) return;
-  const parsed = categoriaSchema.safeParse({ nombre: formData.get("nombre") });
-  if (!parsed.success) return;
-  const { supabase } = await admin();
-  await supabase
-    .from("categorias_gasto")
-    .update({ nombre: parsed.data.nombre })
-    .eq("id", id)
-    .eq("es_sistema", false);
-  revalidatePath("/finanzas/categorias");
-  redirect("/finanzas/categorias?ok=1");
-}
-
-/** Activar/desactivar una categoría (no las del sistema). */
-export async function alternarCategoria(id: string, activo: boolean): Promise<void> {
-  if (!getSupabaseServerConfig().configured) return;
-  const { supabase } = await admin();
-  await supabase
-    .from("categorias_gasto")
-    .update({ activo })
-    .eq("id", id)
-    .eq("es_sistema", false);
-  revalidatePath("/finanzas/categorias");
-  redirect("/finanzas/categorias?ok=1");
 }

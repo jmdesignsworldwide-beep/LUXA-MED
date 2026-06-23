@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
@@ -38,6 +39,7 @@ function Guardar({ label }: { label: string }) {
 export function GastoForm({ categorias }: { categorias: { id: string; nombre: string }[] }) {
   const [state, formAction] = useFormState<FinanzasState, FormData>(registrarGasto, { ok: false });
   const errors = state.errors;
+  const [cat, setCat] = React.useState("");
   return (
     <form action={formAction} className="space-y-5">
       {state.message && !state.ok && (
@@ -59,13 +61,25 @@ export function GastoForm({ categorias }: { categorias: { id: string; nombre: st
       </div>
       <div className="space-y-2">
         <Label htmlFor="categoria_id">Categoría</Label>
-        <Select id="categoria_id" name="categoria_id" defaultValue="">
+        <Select
+          id="categoria_id"
+          name="categoria_id"
+          value={cat}
+          onChange={(e) => setCat(e.target.value)}
+        >
           <option value="" disabled>Elige una categoría…</option>
           {categorias.map((c) => (
             <option key={c.id} value={c.id}>{c.nombre}</option>
           ))}
+          <option value="nueva">➕ Crear categoría nueva…</option>
         </Select>
         <Err id="categoria_id" errors={errors} />
+        {cat === "nueva" && (
+          <div className="pt-1">
+            <Input name="nueva_categoria" placeholder="Nombre de la nueva categoría" autoFocus />
+            <Err id="nueva_categoria" errors={errors} />
+          </div>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="nota">Nota (opcional)</Label>

@@ -1,14 +1,6 @@
 import { hoyRD } from "@/lib/format";
 
-export type RangoClave =
-  | "este_mes"
-  | "mes_pasado"
-  | "este_anio"
-  | "todo"
-  | "personalizado";
-
 export type Periodo = {
-  rango: RangoClave;
   desde: string; // YYYY-MM-DD inclusive
   hasta: string; // YYYY-MM-DD inclusive
 };
@@ -17,45 +9,21 @@ function ymd(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function rangoFechas(
-  rango: RangoClave,
-  desdeIn?: string,
-  hastaIn?: string,
-): { desde: string; hasta: string } {
+/**
+ * Período por rango de fechas (única forma). Por defecto, el mes en curso (RD).
+ */
+export function parsePeriodo(sp: Record<string, string | string[] | undefined>): Periodo {
+  const re = /^\d{4}-\d{2}-\d{2}$/;
   const [y, m] = hoyRD().split("-").map(Number);
-  const primer = (yy: number, mm: number) => `${yy}-${String(mm).padStart(2, "0")}-01`;
-  const ultimo = (yy: number, mm: number) => ymd(new Date(Date.UTC(yy, mm, 0)));
-
-  switch (rango) {
-    case "mes_pasado": {
-      const mm = m === 1 ? 12 : m - 1;
-      const yy = m === 1 ? y - 1 : y;
-      return { desde: primer(yy, mm), hasta: ultimo(yy, mm) };
-    }
-    case "este_anio":
-      return { desde: `${y}-01-01`, hasta: `${y}-12-31` };
-    case "todo":
-      return { desde: "2000-01-01", hasta: "2999-12-31" };
-    case "personalizado": {
-      const re = /^\d{4}-\d{2}-\d{2}$/;
-      return {
-        desde: re.test(desdeIn ?? "") ? (desdeIn as string) : primer(y, m),
-        hasta: re.test(hastaIn ?? "") ? (hastaIn as string) : ultimo(y, m),
-      };
-    }
-    default:
-      return { desde: primer(y, m), hasta: ultimo(y, m) };
-  }
-}
-
-export function parsePeriodo(sp: Record<string, string | undefined>): Periodo {
-  const rango = (
-    ["este_mes", "mes_pasado", "este_anio", "todo", "personalizado"].includes(sp.rango ?? "")
-      ? sp.rango
-      : "este_mes"
-  ) as RangoClave;
-  const { desde, hasta } = rangoFechas(rango, sp.desde, sp.hasta);
-  return { rango, desde, hasta };
+  const primer = `${y}-${String(m).padStart(2, "0")}-01`;
+  const ultimo = ymd(new Date(Date.UTC(y, m, 0)));
+  const get = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+  const d = get(sp.desde);
+  const h = get(sp.hasta);
+  return {
+    desde: re.test(d) ? d : primer,
+    hasta: re.test(h) ? h : ultimo,
+  };
 }
 
 export function mesesEnRango(desde: string, hasta: string): number {
@@ -65,7 +33,7 @@ export function mesesEnRango(desde: string, hasta: string): number {
 }
 
 /** Período inmediatamente anterior, de la misma longitud (para comparar). */
-export function periodoAnterior(desde: string, hasta: string): { desde: string; hasta: string } {
+export function periodoAnterior(desde: string, hasta: string): Periodo {
   const d1 = new Date(`${desde}T00:00:00Z`);
   const d2 = new Date(`${hasta}T00:00:00Z`);
   const dias = Math.round((d2.getTime() - d1.getTime()) / 86400000) + 1;

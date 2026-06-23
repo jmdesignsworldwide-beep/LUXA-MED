@@ -13,7 +13,9 @@ const fechaSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida");
 export const gastoSchema = z.object({
   monto: montoSchema,
   fecha: fechaSchema,
-  categoria_id: z.string().uuid("Elige una categoría"),
+  // "nueva" indica crear categoría al vuelo con nueva_categoria.
+  categoria_id: z.string().min(1, "Elige una categoría"),
+  nueva_categoria: opc(z.string().trim().min(2, "Nombre muy corto").max(80)),
   nota: opc(z.string().trim().max(1000)),
 });
 

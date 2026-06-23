@@ -1,32 +1,30 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Download, FileText, Plus, Settings2, TrendingUp } from "lucide-react";
+import { CalendarRange, Download, FileText, Plus, TrendingUp } from "lucide-react";
 
+import { FiltroCategorias } from "@/components/finanzas/filtro-categorias";
 import { FinanzasResumen } from "@/components/finanzas/resumen-interactivo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { formatFecha, formatRD } from "@/lib/format";
 import { resumenFinanciero } from "@/lib/finanzas-datos";
-import { mesesEnRango, parsePeriodo, periodoAnterior, type RangoClave } from "@/lib/periodo";
+import { mesesEnRango, parsePeriodo, periodoAnterior } from "@/lib/periodo";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const RANGOS: { key: RangoClave; label: string }[] = [
-  { key: "este_mes", label: "Este mes" },
-  { key: "mes_pasado", label: "Mes pasado" },
-  { key: "este_anio", label: "Este año" },
-  { key: "todo", label: "Todo" },
-  { key: "personalizado", label: "Personalizado" },
-];
+/** Une nombres: "A", "A y B", "A, B y C". */
+function unir(nombres: string[]): string {
+  if (nombres.length <= 1) return nombres[0] ?? "";
+  return `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
+}
 
 export default async function FinanzasPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | undefined>;
+  searchParams: Record<string, string | string[] | undefined>;
 }) {
   if (!getSupabaseServerConfig().configured) redirect("/login");
   const supabase = createClient();
@@ -43,29 +41,41 @@ export default async function FinanzasPage({
   if (perfil?.role !== "admin") redirect("/");
 
   const p = parsePeriodo(searchParams);
-  const categoria = (searchParams.categoria ?? "").trim();
   const ant = periodoAnterior(p.desde, p.hasta);
 
-  const [r, rAnt, { data: cats }] = await Promise.all([
-    resumenFinanciero(supabase, p.desde, p.hasta, categoria || undefined),
-    resumenFinanciero(supabase, ant.desde, ant.hasta),
-    supabase.from("categorias_gasto").select("id, nombre").order("nombre"),
+  const catParam = searchParams.cat;
+  const seleccion = Array.isArray(catParam) ? catParam : catParam ? [catParam] : [];
+
+  const { data: catsRaw } = await supabase
+    .from("categorias_gasto")
+    .select("id, nombre, activo")
+    .order("nombre");
+  const cats = (catsRaw ?? []) as { id: string; nombre: string; activo: boolean }[];
+  const nominaId = cats.find((c) => c.nombre === "Nóminas")?.id;
+  const incluirNomina = seleccion.length === 0 || (!!nominaId && seleccion.includes(nominaId));
+
+  const [r, rAnt] = await Promise.all([
+    resumenFinanciero(supabase, p.desde, p.hasta, seleccion, incluirNomina),
+    resumenFinanciero(supabase, ant.desde, ant.hasta, seleccion, incluirNomina),
   ]);
 
   const deltaGasto = r.salio - rAnt.salio;
   const deltaPct = rAnt.salio > 0 ? (deltaGasto / rAnt.salio) * 100 : null;
 
+  const nombresSel = cats.filter((c) => seleccion.includes(c.id)).map((c) => c.nombre);
+  const titulo = seleccion.length === 0 ? "Todas las categorías" : unir(nombresSel);
+
+  // Querystring para exportar (conserva fechas + categorías).
   const qs = (extra: Record<string, string>) => {
     const sp = new URLSearchParams();
-    sp.set("rango", p.rango);
-    if (p.rango === "personalizado") {
-      sp.set("desde", p.desde);
-      sp.set("hasta", p.hasta);
-    }
-    if (categoria) sp.set("categoria", categoria);
+    sp.set("desde", p.desde);
+    sp.set("hasta", p.hasta);
+    seleccion.forEach((id) => sp.append("cat", id));
     Object.entries(extra).forEach(([k, v]) => sp.set(k, v));
     return sp.toString();
   };
+
+  const creado = Array.isArray(searchParams.creado) ? searchParams.creado[0] : searchParams.creado;
 
   return (
     <main className="min-h-screen">
@@ -80,13 +90,12 @@ export default async function FinanzasPage({
           <div className="flex flex-wrap items-center gap-2">
             <Button asChild variant="outline" size="sm"><a href={`/finanzas/export?${qs({ formato: "csv" })}`}><Download className="h-4 w-4" /> Excel</a></Button>
             <Button asChild variant="outline" size="sm"><a href={`/finanzas/export?${qs({ formato: "pdf" })}`} target="_blank" rel="noopener noreferrer"><FileText className="h-4 w-4" /> PDF</a></Button>
-            <Button asChild variant="outline" size="sm"><Link href="/finanzas/categorias"><Settings2 className="h-4 w-4" /> Categorías</Link></Button>
           </div>
         </div>
 
-        {searchParams.creado && (
+        {creado && (
           <div role="status" className="mt-6 rounded-2xl border border-brand-cyan/30 bg-brand-cyan/10 px-4 py-3 text-sm font-medium text-primary">
-            ✓ {searchParams.creado === "ingreso" ? "Ingreso" : "Gasto"} registrado correctamente.
+            ✓ {creado === "ingreso" ? "Ingreso" : "Gasto"} registrado correctamente.
           </div>
         )}
 
@@ -96,35 +105,41 @@ export default async function FinanzasPage({
           <Button asChild><Link href="/finanzas/gasto/nuevo"><Plus className="h-4 w-4" /> Registrar gasto</Link></Button>
         </div>
 
-        {/* Filtros */}
-        <form method="get" className="mt-6 flex flex-wrap items-end gap-3 rounded-capsule border border-border/70 bg-card p-4 shadow-soft">
-          <div className="space-y-1">
-            <Label htmlFor="rango">Período</Label>
-            <Select id="rango" name="rango" defaultValue={p.rango}>
-              {RANGOS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
-            </Select>
+        {/* Filtro de fechas (premium) */}
+        <form method="get" className="mt-6 rounded-capsule border border-border/70 bg-card p-5 shadow-soft">
+          {/* conserva las categorías seleccionadas al cambiar fechas */}
+          {seleccion.map((id) => <input key={id} type="hidden" name="cat" value={id} />)}
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <CalendarRange className="h-5 w-5 text-primary" />
+              Rango de fechas
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="desde" className="text-xs">Desde</Label>
+              <Input id="desde" name="desde" type="date" defaultValue={p.desde} className="h-11" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="hasta" className="text-xs">Hasta</Label>
+              <Input id="hasta" name="hasta" type="date" defaultValue={p.hasta} className="h-11" />
+            </div>
+            <Button type="submit" variant="default">Aplicar</Button>
+            <Button asChild variant="ghost"><Link href="/finanzas">Mes actual</Link></Button>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="categoria">Categoría (gastos)</Label>
-            <Select id="categoria" name="categoria" defaultValue={categoria}>
-              <option value="">Todas</option>
-              {(cats ?? []).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="desde">Desde</Label>
-            <Input id="desde" name="desde" type="date" defaultValue={p.desde} />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="hasta">Hasta</Label>
-            <Input id="hasta" name="hasta" type="date" defaultValue={p.hasta} />
-          </div>
-          <Button type="submit" variant="default">Aplicar</Button>
-          <Button asChild variant="ghost"><Link href="/finanzas">Limpiar</Link></Button>
         </form>
 
-        {/* Frase en cristiano */}
-        <div className="mt-6 rounded-capsule border border-brand-cyan/30 bg-brand-cyan/5 p-6">
+        {/* Filtro multi-categoría (chips) */}
+        <div className="mt-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Categorías de gasto</p>
+          <FiltroCategorias categorias={cats} seleccion={seleccion} />
+        </div>
+
+        {/* Título dinámico de lo que se está viendo */}
+        <p className="mt-5 text-sm text-muted-foreground">
+          Viendo: <strong className="text-foreground">{titulo}</strong>
+        </p>
+
+        {/* Resumen en cristiano */}
+        <div className="mt-3 rounded-capsule border border-brand-cyan/30 bg-brand-cyan/5 p-6">
           <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary">
             <TrendingUp className="h-4 w-4" /> Resumen del período
           </p>
@@ -137,7 +152,7 @@ export default async function FinanzasPage({
             .{" "}
             {r.mayorGasto
               ? <>Tu mayor gasto fue <strong>{r.mayorGasto.categoria}</strong> ({formatRD(r.mayorGasto.monto)}).</>
-              : "Sin gastos registrados en el período."}
+              : "Sin gastos en la selección."}
             {deltaPct !== null && (
               <>
                 {" "}El gasto{" "}
@@ -148,7 +163,7 @@ export default async function FinanzasPage({
           </p>
         </div>
 
-        {/* Tarjetas interactivas + gasto por categoría (clic = detalle) */}
+        {/* Tarjetas interactivas + gasto por categoría */}
         <FinanzasResumen
           entro={r.entro}
           salio={r.salio}
@@ -161,7 +176,7 @@ export default async function FinanzasPage({
           mayorGasto={r.mayorGasto}
         />
 
-        {/* Tablas */}
+        {/* Tablas completas */}
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card className="p-6">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Gastos ({r.gastos.length})</h2>

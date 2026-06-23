@@ -32,30 +32,22 @@ export type ResumenFinanciero = {
 /**
  * Resumen financiero de un período. Refleja la NÓMINA como gasto de categoría
  * "Nóminas" (sin duplicar: la nómina sigue siendo su propia fuente).
+ * categoriaIds vacío = todas. incluirNomina decide si se suma la nómina.
  */
 export async function resumenFinanciero(
   supabase: SupabaseClient,
   desde: string,
   hasta: string,
-  categoriaId?: string,
+  categoriaIds: string[] = [],
+  incluirNomina = true,
 ): Promise<ResumenFinanciero> {
-  let catNombre: string | null = null;
-  if (categoriaId) {
-    const { data } = await supabase
-      .from("categorias_gasto")
-      .select("nombre")
-      .eq("id", categoriaId)
-      .maybeSingle();
-    catNombre = (data?.nombre as string) ?? null;
-  }
-
   // Gastos manuales
   let gq = supabase
     .from("gastos")
     .select("id, monto, fecha, nota, categorias_gasto(nombre)")
     .gte("fecha", desde)
     .lte("fecha", hasta);
-  if (categoriaId) gq = gq.eq("categoria_id", categoriaId);
+  if (categoriaIds.length > 0) gq = gq.in("categoria_id", categoriaIds);
   const { data: gm } = await gq;
   const gastosManual: GastoFila[] = ((gm ?? []) as Record<string, unknown>[]).map((g) => {
     const cat = g.categorias_gasto as { nombre: string } | { nombre: string }[] | null;
@@ -70,9 +62,9 @@ export async function resumenFinanciero(
     };
   });
 
-  // Nómina reflejada (si no se filtra por otra categoría)
+  // Nómina reflejada (si corresponde a la selección)
   let nominaFilas: GastoFila[] = [];
-  if (!categoriaId || catNombre === "Nóminas") {
+  if (incluirNomina) {
     const { data: nm } = await supabase
       .from("nominas")
       .select("id, monto, fecha_pago, empleados(nombre_completo)")

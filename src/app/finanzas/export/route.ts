@@ -24,10 +24,20 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (perfil?.role !== "admin") return new NextResponse("No autorizado.", { status: 403 });
 
-  const sp = Object.fromEntries(new URL(req.url).searchParams.entries());
+  const url = new URL(req.url);
+  const sp = Object.fromEntries(url.searchParams.entries());
   const p = parsePeriodo(sp);
-  const categoria = (sp.categoria ?? "").trim();
-  const r = await resumenFinanciero(supabase, p.desde, p.hasta, categoria || undefined);
+  const seleccion = url.searchParams.getAll("cat");
+  let incluirNomina = true;
+  if (seleccion.length > 0) {
+    const { data: nomCat } = await supabase
+      .from("categorias_gasto")
+      .select("id")
+      .eq("nombre", "Nóminas")
+      .maybeSingle();
+    incluirNomina = !!nomCat?.id && seleccion.includes(nomCat.id as string);
+  }
+  const r = await resumenFinanciero(supabase, p.desde, p.hasta, seleccion, incluirNomina);
 
   if ((sp.formato ?? "csv") === "pdf") {
     const logo = await fetch(new URL("/luxamed-logo.jpeg", req.url))
