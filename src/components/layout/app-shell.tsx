@@ -14,11 +14,13 @@ export function AppShell({
   nombre,
   rolLabel,
   autenticado,
+  esAdmin = false,
   children,
 }: {
   nombre: string;
   rolLabel: string;
   autenticado: boolean;
+  esAdmin?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -32,7 +34,7 @@ export function AppShell({
   return (
     <div className="relative min-h-screen">
       <AmbientBackground />
-      <Sidebar nombre={nombre} rolLabel={rolLabel} />
+      <Sidebar nombre={nombre} rolLabel={rolLabel} esAdmin={esAdmin} />
       <div className="relative z-10 min-h-screen pb-20 md:pb-0 md:pl-[76px]">
         {children}
       </div>

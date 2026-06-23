@@ -13,6 +13,7 @@ import {
   LogOut,
   Settings,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ type NavItem = {
   label: string;
   icon: LucideIcon;
   exact?: boolean;
+  adminOnly?: boolean;
 };
 
 const ITEMS: NavItem[] = [
@@ -32,6 +34,7 @@ const ITEMS: NavItem[] = [
   { href: "/agenda", label: "Agenda", icon: CalendarDays },
   { href: "/pacientes", label: "Pacientes", icon: Users },
   { href: "/empleados", label: "Empleados", icon: Briefcase },
+  { href: "/nominas", label: "Nómina", icon: Wallet, adminOnly: true },
   { href: "/camara", label: "Cámara", icon: Gauge },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
@@ -44,13 +47,16 @@ function esActivo(pathname: string, href: string, exact?: boolean) {
 export function Sidebar({
   nombre,
   rolLabel,
+  esAdmin = false,
 }: {
   nombre: string;
   rolLabel: string;
+  esAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [hover, setHover] = React.useState(false);
   const inicial = (nombre.trim()[0] ?? "·").toUpperCase();
+  const items = ITEMS.filter((it) => !it.adminOnly || esAdmin);
 
   return (
     <>
@@ -91,7 +97,7 @@ export function Sidebar({
 
         {/* Navegación */}
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {ITEMS.map((it) => {
+          {items.map((it) => {
             const activo = esActivo(pathname, it.href, it.exact);
             return (
               <Link
@@ -177,7 +183,7 @@ export function Sidebar({
 
       {/* ===== Móvil: navegación inferior ===== */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch justify-around border-t border-border/60 bg-card/90 backdrop-blur-xl md:hidden">
-        {ITEMS.map((it) => {
+        {items.map((it) => {
           const activo = esActivo(pathname, it.href, it.exact);
           return (
             <Link

@@ -20,6 +20,7 @@ export default async function RootLayout({
   let nombre = "";
   let rolLabel = "";
   let autenticado = false;
+  let esAdmin = false;
 
   if (getSupabaseServerConfig().configured) {
     const supabase = createClient();
@@ -36,6 +37,7 @@ export default async function RootLayout({
         autenticado = true;
         nombre = perfil.nombre_completo ?? "";
         rolLabel = etiquetaRol(perfil.role, perfil.genero);
+        esAdmin = perfil.role === "admin";
       }
     }
   }
@@ -49,7 +51,12 @@ export default async function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <AppShell nombre={nombre} rolLabel={rolLabel} autenticado={autenticado}>
+          <AppShell
+            nombre={nombre}
+            rolLabel={rolLabel}
+            autenticado={autenticado}
+            esAdmin={esAdmin}
+          >
             {children}
           </AppShell>
         </ThemeProvider>

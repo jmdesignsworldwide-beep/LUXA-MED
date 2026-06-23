@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Lock, Pencil } from "lucide-react";
+import { ArrowLeft, Download, Lock, Pencil, Plus, Wallet } from "lucide-react";
 
 import { cambiarEstadoEmpleado } from "@/app/empleados/actions";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { METODO_PAGO_LABEL } from "@/lib/constants/nominas";
 import { PUESTO_LABEL } from "@/lib/constants/empleados";
 import { formatFecha, formatRD } from "@/lib/format";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
@@ -98,6 +99,19 @@ export default async function FichaEmpleadoPage({
       .eq("id", empleado.user_id)
       .maybeSingle();
     cuenta = data ?? null;
+  }
+
+  // Historial de pagos de nómina (solo admin).
+  let pagos: { id: string; monto: number; fecha_pago: string; periodo: string; metodo: string }[] = [];
+  let totalPagado = 0;
+  if (esAdmin) {
+    const { data } = await supabase
+      .from("nominas")
+      .select("id, monto, fecha_pago, periodo, metodo")
+      .eq("empleado_id", params.id)
+      .order("fecha_pago", { ascending: false });
+    pagos = (data ?? []) as typeof pagos;
+    totalPagado = pagos.reduce((a, p) => a + Number(p.monto), 0);
   }
 
   return (
@@ -216,6 +230,58 @@ export default async function FichaEmpleadoPage({
               <Lock className="mb-2 h-4 w-4" />
               Los datos privados (salario, cédula, banco) solo los puede ver el
               administrador.
+            </div>
+          )}
+
+          {esAdmin && (
+            <div className="rounded-capsule border border-border/70 bg-card p-6 shadow-soft">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Wallet className="h-4 w-4" />
+                  Pagos de nómina ({pagos.length}) · Total {formatRD(totalPagado)}
+                </h2>
+                <Button asChild variant="vital" size="sm">
+                  <Link href={`/nominas/nuevo?empleado=${empleado.id}`}>
+                    <Plus className="h-4 w-4" />
+                    Registrar pago
+                  </Link>
+                </Button>
+              </div>
+
+              {pagos.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Aún no hay pagos registrados.
+                </p>
+              ) : (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <th className="px-3 py-2 font-medium">Fecha</th>
+                        <th className="px-3 py-2 font-medium">Período</th>
+                        <th className="px-3 py-2 font-medium">Método</th>
+                        <th className="px-3 py-2 font-medium">Monto</th>
+                        <th className="px-3 py-2 font-medium">Recibo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagos.map((p) => (
+                        <tr key={p.id} className="border-b border-border/40 last:border-0">
+                          <td className="px-3 py-2 whitespace-nowrap">{formatFecha(p.fecha_pago)}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{p.periodo}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{METODO_PAGO_LABEL[p.metodo] ?? p.metodo}</td>
+                          <td className="px-3 py-2 font-semibold tabular-nums">{formatRD(Number(p.monto))}</td>
+                          <td className="px-3 py-2">
+                            <a href={`/nominas/${p.id}/recibo`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                              <Download className="h-3.5 w-3.5" /> PDF
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
