@@ -48,7 +48,7 @@ export default async function NuevoEmpleadoPage() {
         </h1>
 
         <div className="mt-8 rounded-capsule border border-border/70 bg-card p-6 shadow-soft sm:p-8">
-          <EmpleadoForm action={crearEmpleado} cuentas={cuentas} />
+          <EmpleadoForm action={crearEmpleado} cuentas={cuentas} permitirCuenta />
         </div>
       </div>
     </main>

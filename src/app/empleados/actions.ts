@@ -3,13 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { adminDisponible, createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
-import { empleadoSchema } from "@/lib/validation/empleado";
+import { cuentaEmpleadoSchema, empleadoSchema } from "@/lib/validation/empleado";
 
 export type EmpleadoState = {
   ok: boolean;
   message?: string;
   errors?: Record<string, string[]>;
+  tempPassword?: string;
+  cuentaEmail?: string;
+  empleadoId?: string;
 };
 
 function toFecha(d: Date | undefined): string | null {
@@ -87,11 +91,97 @@ export async function crearEmpleado(
     .insert({ empleado_id: emp.id, ...privado(d) });
   if (errPriv) {
     // El empleado quedó creado; avisamos que los datos privados fallaron.
-    return { ok: false, message: "Empleado creado, pero no se guardaron los datos privados. Edítalo para reintentar." };
+    return { ok: false, message: "Empleado creado, pero no se guardaron los datos privados. Edítalo para reintentar.", empleadoId: emp.id };
   }
 
+  // ¿Crear cuenta de acceso? Si no, terminamos.
+  if (String(formData.get("crear_cuenta") ?? "") !== "on") {
+    revalidatePath("/empleados");
+    redirect(`/empleados/${emp.id}?creado=1`);
+  }
+
+  // Solo admin puede crear cuentas (no escalar privilegios).
+  const { data: perfil } = await supabase
+    .from("user_profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (perfil?.role !== "admin") {
+    return { ok: false, message: "Empleado creado. Solo un administrador puede crear cuentas de acceso.", empleadoId: emp.id };
+  }
+  if (!adminDisponible()) {
+    return {
+      ok: false,
+      message:
+        "Empleado creado, pero la creación de cuentas no está configurada en el servidor (falta SUPABASE_SERVICE_ROLE_KEY).",
+      empleadoId: emp.id,
+    };
+  }
+
+  const cuenta = cuentaEmpleadoSchema.safeParse({
+    email: formData.get("cuenta_email"),
+    password: formData.get("cuenta_password"),
+    rol: formData.get("cuenta_rol"),
+  });
+  if (!cuenta.success) {
+    const fe = cuenta.error.flatten().fieldErrors;
+    return {
+      ok: false,
+      message: "Empleado creado, pero revisa los datos de la cuenta.",
+      empleadoId: emp.id,
+      errors: {
+        cuenta_email: fe.email ?? [],
+        cuenta_password: fe.password ?? [],
+        cuenta_rol: fe.rol ?? [],
+      },
+    };
+  }
+
+  const admin = createAdminClient();
+  const { data: creado, error: errAuth } = await admin.auth.admin.createUser({
+    email: cuenta.data.email,
+    password: cuenta.data.password,
+    email_confirm: true,
+    user_metadata: { full_name: d.nombre_completo },
+  });
+  if (errAuth || !creado?.user) {
+    const msg = (errAuth?.message ?? "").toLowerCase();
+    const dup = msg.includes("already") || msg.includes("registered") || msg.includes("exists");
+    return {
+      ok: false,
+      message: dup
+        ? "Empleado creado, pero ese correo ya tiene una cuenta. Edita el empleado y usa otro correo."
+        : "Empleado creado, pero no se pudo crear la cuenta de acceso.",
+      empleadoId: emp.id,
+    };
+  }
+
+  const nuevoUserId = creado.user.id;
+  // El trigger crea el perfil como recepción; asignamos el rol elegido.
+  await admin
+    .from("user_profiles")
+    .update({ role: cuenta.data.rol, nombre_completo: d.nombre_completo })
+    .eq("id", nuevoUserId);
+  // Vincular el empleado con su cuenta.
+  await admin.from("empleados").update({ user_id: nuevoUserId }).eq("id", emp.id);
+  // Auditoría — NUNCA la contraseña.
+  await admin.from("audit_log").insert({
+    table_name: "auth.users",
+    action: "CUENTA_CREADA",
+    row_id: nuevoUserId,
+    actor_id: user.id,
+    actor_role: "admin",
+    new_data: { email: cuenta.data.email, role: cuenta.data.rol, empleado_id: emp.id },
+  });
+
   revalidatePath("/empleados");
-  redirect(`/empleados/${emp.id}?creado=1`);
+  return {
+    ok: true,
+    message: "Empleado y cuenta de acceso creados.",
+    tempPassword: cuenta.data.password,
+    cuentaEmail: cuenta.data.email,
+    empleadoId: emp.id,
+  };
 }
 
 /** Editar empleado (solo admin). */
