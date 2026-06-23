@@ -116,3 +116,59 @@ export async function resumenFinanciero(
 
   return { gastos, ingresos, entro, salio, margen, margenPct, porCategoria, mayorGasto };
 }
+
+const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+export type SerieMensual = {
+  etiquetas: string[];
+  porCategoria: Record<string, number[]>;
+};
+
+/**
+ * Serie mensual (gasto por categoría) de los últimos `n` meses hasta `hasta`.
+ * Incluye la nómina como categoría "Nóminas". Para el mini-gráfico del desglose.
+ */
+export async function serieMensualCategorias(
+  supabase: SupabaseClient,
+  hasta: string,
+  n = 6,
+): Promise<SerieMensual> {
+  const [hy, hm] = hasta.split("-").map(Number);
+  const meses: { key: string; label: string; anio: number; mes: number }[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    let mm = hm - i;
+    let yy = hy;
+    while (mm <= 0) {
+      mm += 12;
+      yy -= 1;
+    }
+    meses.push({ key: `${yy}-${String(mm).padStart(2, "0")}`, label: MESES_CORTOS[mm - 1], anio: yy, mes: mm });
+  }
+  const desde = `${meses[0].key}-01`;
+  const ult = meses[meses.length - 1];
+  const hastaFin = new Date(Date.UTC(ult.anio, ult.mes, 0)).toISOString().slice(0, 10);
+  const idx = new Map(meses.map((m, i) => [m.key, i]));
+
+  const [{ data: gm }, { data: nm }] = await Promise.all([
+    supabase.from("gastos").select("monto, fecha, categorias_gasto(nombre)").gte("fecha", desde).lte("fecha", hastaFin),
+    supabase.from("nominas").select("monto, fecha_pago").gte("fecha_pago", desde).lte("fecha_pago", hastaFin),
+  ]);
+
+  const porCategoria: Record<string, number[]> = {};
+  const sumar = (cat: string, key: string, monto: number) => {
+    const i = idx.get(key);
+    if (i == null) return;
+    if (!porCategoria[cat]) porCategoria[cat] = Array(n).fill(0);
+    porCategoria[cat][i] += monto;
+  };
+  for (const g of (gm ?? []) as Record<string, unknown>[]) {
+    const cat = g.categorias_gasto as { nombre: string } | { nombre: string }[] | null;
+    const nombre = (Array.isArray(cat) ? cat[0]?.nombre : cat?.nombre) ?? "Sin categoría";
+    sumar(nombre, (g.fecha as string).slice(0, 7), Number(g.monto));
+  }
+  for (const x of (nm ?? []) as Record<string, unknown>[]) {
+    sumar("Nóminas", (x.fecha_pago as string).slice(0, 7), Number(x.monto));
+  }
+
+  return { etiquetas: meses.map((m) => m.label), porCategoria };
+}

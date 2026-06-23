@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { formatFecha, formatRD } from "@/lib/format";
-import { resumenFinanciero } from "@/lib/finanzas-datos";
+import { resumenFinanciero, serieMensualCategorias } from "@/lib/finanzas-datos";
 import { mesesEnRango, parsePeriodo, periodoAnterior } from "@/lib/periodo";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
@@ -54,13 +54,18 @@ export default async function FinanzasPage({
   const nominaId = cats.find((c) => c.nombre === "Nóminas")?.id;
   const incluirNomina = seleccion.length === 0 || (!!nominaId && seleccion.includes(nominaId));
 
-  const [r, rAnt] = await Promise.all([
+  const [r, rAnt, serie] = await Promise.all([
     resumenFinanciero(supabase, p.desde, p.hasta, seleccion, incluirNomina),
     resumenFinanciero(supabase, ant.desde, ant.hasta, seleccion, incluirNomina),
+    serieMensualCategorias(supabase, p.hasta, 6),
   ]);
 
   const deltaGasto = r.salio - rAnt.salio;
   const deltaPct = rAnt.salio > 0 ? (deltaGasto / rAnt.salio) * 100 : null;
+
+  // Totales del período anterior por categoría (para comparar en el desglose).
+  const anteriorPorCat: Record<string, number> = {};
+  rAnt.porCategoria.forEach((c) => (anteriorPorCat[c.categoria] = c.monto));
 
   const nombresSel = cats.filter((c) => seleccion.includes(c.id)).map((c) => c.nombre);
   const titulo = seleccion.length === 0 ? "Todas las categorías" : unir(nombresSel);
@@ -174,6 +179,8 @@ export default async function FinanzasPage({
           ingresos={r.ingresos}
           porCategoria={r.porCategoria}
           mayorGasto={r.mayorGasto}
+          anterior={{ entro: rAnt.entro, salio: rAnt.salio, margen: rAnt.margen, porCategoria: anteriorPorCat }}
+          serie={serie}
         />
 
         {/* Tablas completas */}
