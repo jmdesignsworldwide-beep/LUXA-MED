@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Gauge,
   Home,
+  LineChart,
   LogOut,
   Settings,
   Users,
@@ -35,6 +36,7 @@ const ITEMS: NavItem[] = [
   { href: "/pacientes", label: "Pacientes", icon: Users },
   { href: "/empleados", label: "Empleados", icon: Briefcase },
   { href: "/nominas", label: "Nómina", icon: Wallet, adminOnly: true },
+  { href: "/finanzas", label: "Finanzas", icon: LineChart, adminOnly: true },
   { href: "/camara", label: "Cámara", icon: Gauge },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
