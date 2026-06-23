@@ -37,6 +37,7 @@ export default async function NuevoPacientePage() {
           <PacienteForm
             action={registrarPaciente}
             submitLabel="Guardar paciente"
+            permitirEscaneo
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Pencil, Plus, Stethoscope, Wind } from "lucide-react";
+import { ArrowLeft, FileText, Pencil, Plus, Stethoscope, Wind } from "lucide-react";
 
 import { cambiarEstadoPaciente } from "@/app/pacientes/[id]/actions";
 import { cancelarSesion } from "@/app/pacientes/[id]/sesiones/nueva/actions";
@@ -131,6 +131,26 @@ export default async function FichaPacientePage({
         materialPorSesion.set(sid, arr);
       }
     }
+  }
+
+  // Documentos escaneados del paciente (imágenes originales, respaldo).
+  type DocRow = { id: string; tipo: string; storage_path: string; created_at: string };
+  let documentos: { id: string; tipo: string; fecha: string; url: string | null }[] = [];
+  {
+    const { data: docs } = await supabase
+      .from("documentos_paciente")
+      .select("id, tipo, storage_path, created_at")
+      .eq("paciente_id", params.id)
+      .order("created_at", { ascending: false });
+    const filas = (docs ?? []) as DocRow[];
+    documentos = await Promise.all(
+      filas.map(async (d) => {
+        const { data: signed } = await supabase.storage
+          .from("documentos-pacientes")
+          .createSignedUrl(d.storage_path, 600);
+        return { id: d.id, tipo: d.tipo, fecha: d.created_at, url: signed?.signedUrl ?? null };
+      }),
+    );
   }
 
   // Enlace activo del portal del paciente (lo gestiona cualquier personal).
@@ -411,6 +431,40 @@ export default async function FichaPacientePage({
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Documentos escaneados (respaldo del expediente) */}
+        {documentos.length > 0 && (
+          <div className="mt-5 rounded-capsule border border-border/70 bg-card p-6 shadow-soft">
+            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <FileText className="h-4 w-4" />
+              Documentos del paciente ({documentos.length})
+            </h2>
+            <ul className="mt-4 space-y-2">
+              {documentos.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-border/60 px-4 py-2.5 text-sm"
+                >
+                  <span className="capitalize">
+                    {d.tipo} <span className="text-muted-foreground">· {formatFecha(d.fecha)}</span>
+                  </span>
+                  {d.url ? (
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Ver documento
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No disponible</span>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
