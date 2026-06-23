@@ -42,6 +42,22 @@ export const empleadoSchema = z.object({
 
 export type EmpleadoInput = z.infer<typeof empleadoSchema>;
 
+/** Cuenta de acceso del empleado (la crea el admin). */
+export const cuentaEmpleadoSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Correo inválido"),
+  password: z
+    .string()
+    .min(8, "Mínimo 8 caracteres")
+    .max(72, "Demasiado larga")
+    .regex(/[A-Z]/, "Incluye al menos una mayúscula")
+    .regex(/[0-9]/, "Incluye al menos un número"),
+  rol: z.enum(["admin", "enfermera", "recepcion"], {
+    errorMap: () => ({ message: "Elige el rol de acceso" }),
+  }),
+});
+
+export type CuentaEmpleadoInput = z.infer<typeof cuentaEmpleadoSchema>;
+
 /** Asignación de rol a un usuario (solo Admin). */
 export const asignarRolSchema = z.object({
   user_id: z.string().uuid(),
