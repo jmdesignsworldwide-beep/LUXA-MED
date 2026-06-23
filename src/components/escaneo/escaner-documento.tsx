@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Camera, Loader2, Sparkles, Upload } from "lucide-react";
+import { Camera, Loader2, RefreshCw, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 type Motivo = "no_config" | "ilegible" | "api" | "parse";
 export type ResultadoScan<T> =
   | { ok: true; datos: T; campos: string[] }
-  | { ok: false; motivo: Motivo };
+  | { ok: false; motivo: Motivo; detalle?: string };
 
 const MENSAJES: Record<Motivo, string> = {
   no_config: "El escaneo con IA no está disponible ahora. Puedes llenar el formulario a mano.",
@@ -20,9 +20,10 @@ const MENSAJES: Record<Motivo, string> = {
 
 /**
  * Widget reusable de escaneo de documentos con IA.
- * Renderiza el <input type="file"> con el `name` dado DENTRO del formulario
- * padre, para que la imagen también se envíe al guardar (respaldo). La IA solo
- * LLENA; el humano revisa y confirma antes de guardar.
+ * UN SOLO botón: al pulsarlo abre la cámara (móvil) o el selector (compu) y al
+ * elegir/tomar la foto ESCANEA automáticamente (sin segundo clic). El <input>
+ * vive dentro del formulario padre (name dado) para enviar también la imagen al
+ * guardar (respaldo). La IA solo LLENA; el humano revisa y confirma.
  */
 export function EscanerDocumento<T>({
   name,
@@ -41,19 +42,15 @@ export function EscanerDocumento<T>({
   const inputId = React.useId();
   const [estado, setEstado] = React.useState<"idle" | "cargando" | "ok" | "error">("idle");
   const [mensaje, setMensaje] = React.useState("");
+  const [detalle, setDetalle] = React.useState("");
   const [archivo, setArchivo] = React.useState("");
 
-  async function escanear() {
-    const file = inputRef.current?.files?.[0];
-    if (!file) {
-      setEstado("error");
-      setMensaje("Primero elige o toma una foto del documento.");
-      return;
-    }
+  async function escanear(file: File) {
     const fd = new FormData();
     fd.append(name, file);
     setEstado("cargando");
     setMensaje("");
+    setDetalle("");
     try {
       const res = await accion(fd);
       if (res.ok) {
@@ -65,12 +62,23 @@ export function EscanerDocumento<T>({
       } else {
         setEstado("error");
         setMensaje(MENSAJES[res.motivo]);
+        setDetalle(res.detalle ?? "");
       }
-    } catch {
+    } catch (e) {
       setEstado("error");
       setMensaje("No se pudo completar el escaneo. Intenta de nuevo.");
+      setDetalle((e as Error)?.message ?? "");
     }
   }
+
+  function onChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setArchivo(f.name || "imagen");
+    void escanear(f); // escanea automáticamente, sin segundo clic
+  }
+
+  const cargando = estado === "cargando";
 
   return (
     <div className="rounded-capsule border border-dashed border-brand-cyan/40 bg-brand-cyan/5 p-5">
@@ -83,10 +91,11 @@ export function EscanerDocumento<T>({
           <p className="mt-0.5 text-xs text-muted-foreground">{descripcion}</p>
 
           {/*
-            Input asociado a un <label> nativo (sin click programático ni
-            display:none). Así el evento onChange se dispara SIEMPRE, también en
-            Safari/iPhone. Se oculta con sr-only (sigue en el formulario para
-            enviarse al guardar).
+            Input nativo asociado a un <label> (sin click programático ni
+            display:none) para que onChange se dispare también en Safari/iPhone.
+            capture="environment" sugiere la cámara trasera en móvil; en compu
+            abre el selector de archivos. Permanece montado para enviarse al
+            guardar.
           */}
           <input
             ref={inputRef}
@@ -94,39 +103,34 @@ export function EscanerDocumento<T>({
             type="file"
             name={name}
             accept="image/*,.heic,.heif"
+            capture="environment"
             className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              setArchivo(f ? f.name || "imagen" : "");
-              setEstado("idle");
-              setMensaje("");
-            }}
+            onChange={onChange}
           />
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <label htmlFor={inputId} className="cursor-pointer">
-                <Upload className="h-4 w-4" />
-                {archivo ? "Cambiar imagen" : "Elegir / tomar foto"}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {cargando ? (
+              <Button type="button" variant="vital" size="sm" disabled>
+                <Loader2 className="h-4 w-4 animate-spin" /> Leyendo el documento…
+              </Button>
+            ) : (
+              <Button asChild variant="vital" size="sm">
+                <label htmlFor={inputId} className="cursor-pointer">
+                  <Camera className="h-4 w-4" />
+                  {estado === "ok" || estado === "error" ? "Escanear otra imagen" : "📸 Escanear documento con IA"}
+                </label>
+              </Button>
+            )}
+
+            {/* Acceso pequeño para cambiar la imagen / reintentar tras un resultado. */}
+            {(estado === "ok" || estado === "error") && !cargando && (
+              <label
+                htmlFor={inputId}
+                className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Cambiar imagen
               </label>
-            </Button>
-            <Button
-              type="button"
-              variant="vital"
-              size="sm"
-              onClick={escanear}
-              disabled={estado === "cargando" || !archivo}
-            >
-              {estado === "cargando" ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Leyendo el documento…
-                </>
-              ) : (
-                <>
-                  <Camera className="h-4 w-4" /> Escanear con IA
-                </>
-              )}
-            </Button>
+            )}
           </div>
 
           {archivo && (
@@ -143,6 +147,11 @@ export function EscanerDocumento<T>({
               }`}
             >
               {mensaje}
+            </p>
+          )}
+          {detalle && estado === "error" && (
+            <p className="mt-1 break-words text-[11px] text-muted-foreground/80">
+              Detalle técnico: {detalle}
             </p>
           )}
           <p className="mt-2 text-[11px] text-muted-foreground">

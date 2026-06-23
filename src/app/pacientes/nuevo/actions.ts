@@ -38,7 +38,7 @@ export type PacienteEscaneado = {
 
 export type ScanState =
   | { ok: true; datos: PacienteEscaneado; campos: string[] }
-  | { ok: false; motivo: MotivoFallo };
+  | { ok: false; motivo: MotivoFallo; detalle?: string };
 
 const SCHEMA_PACIENTE = {
   type: "OBJECT",

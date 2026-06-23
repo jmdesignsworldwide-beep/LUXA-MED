@@ -31,7 +31,7 @@ export type MotivoFallo = "no_config" | "ilegible" | "api" | "parse";
 
 export type ResultadoExtraccion<T> =
   | { ok: true; datos: T }
-  | { ok: false; motivo: MotivoFallo };
+  | { ok: false; motivo: MotivoFallo; detalle?: string };
 
 /**
  * Envía una imagen + instrucción a Gemini y devuelve JSON estructurado.
@@ -69,11 +69,28 @@ export async function extraerDeImagen<T>(opts: {
       }),
       cache: "no-store",
     });
-  } catch {
-    return { ok: false, motivo: "api" };
+  } catch (e) {
+    return { ok: false, motivo: "api", detalle: `fetch: ${(e as Error)?.message ?? "sin red"}` };
   }
 
-  if (!res.ok) return { ok: false, motivo: "api" };
+  if (!res.ok) {
+    let cuerpo = "";
+    try {
+      cuerpo = await res.text();
+    } catch {
+      /* ignorar */
+    }
+    // Extraer el mensaje de error de Gemini si viene en JSON.
+    let msg = cuerpo.slice(0, 300);
+    try {
+      const j = JSON.parse(cuerpo) as { error?: { message?: string; status?: string } };
+      if (j.error?.message) msg = `${j.error.status ?? ""} ${j.error.message}`.trim();
+    } catch {
+      /* el cuerpo no era JSON */
+    }
+    console.error(`[gemini] ${res.status} modelo=${MODEL}: ${msg}`);
+    return { ok: false, motivo: "api", detalle: `HTTP ${res.status} · modelo ${MODEL} · ${msg}` };
+  }
 
   let json: unknown;
   try {
