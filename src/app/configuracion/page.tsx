@@ -3,15 +3,10 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 
 import { CambiarPasswordForm } from "@/components/configuracion/cambiar-password-form";
+import { etiquetaRol } from "@/lib/gender";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-const ROL_LABEL: Record<string, string> = {
-  admin: "Administradora",
-  enfermera: "Enfermera",
-  recepcion: "Recepción",
-};
 
 export default async function ConfiguracionPage() {
   if (!getSupabaseServerConfig().configured) redirect("/login");
@@ -23,7 +18,7 @@ export default async function ConfiguracionPage() {
 
   const { data: perfil } = await supabase
     .from("user_profiles")
-    .select("role, nombre_completo")
+    .select("role, nombre_completo, genero")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -43,7 +38,7 @@ export default async function ConfiguracionPage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {perfil?.nombre_completo ?? user.email}
-          {perfil?.role ? ` · ${ROL_LABEL[perfil.role] ?? perfil.role}` : ""}
+          {perfil?.role ? ` · ${etiquetaRol(perfil.role, perfil.genero)}` : ""}
         </p>
 
         <section className="mt-8 rounded-capsule border border-border/70 bg-card p-6 shadow-soft sm:p-8">
