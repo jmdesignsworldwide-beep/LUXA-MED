@@ -1,16 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Download,
-  FileText,
-  Minus,
-  Plus,
-  Settings2,
-  TrendingUp,
-} from "lucide-react";
+import { Download, FileText, Plus, Settings2, TrendingUp } from "lucide-react";
 
+import { FinanzasResumen } from "@/components/finanzas/resumen-interactivo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -156,45 +148,18 @@ export default async function FinanzasPage({
           </p>
         </div>
 
-        {/* Tarjetas */}
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="p-6">
-            <div className="flex h-11 w-11 items-center justify-center rounded-pill bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"><ArrowUpRight className="h-5 w-5" /></div>
-            <p className="mt-4 text-sm font-medium text-muted-foreground">Entró</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{formatRD(r.entro)}</p>
-          </Card>
-          <Card className="p-6">
-            <div className="flex h-11 w-11 items-center justify-center rounded-pill bg-destructive/15 text-destructive"><ArrowDownRight className="h-5 w-5" /></div>
-            <p className="mt-4 text-sm font-medium text-muted-foreground">Salió</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{formatRD(r.salio)}</p>
-          </Card>
-          <Card className="p-6">
-            <div className="flex h-11 w-11 items-center justify-center rounded-pill bg-accent text-primary"><Minus className="h-5 w-5" /></div>
-            <p className="mt-4 text-sm font-medium text-muted-foreground">Margen</p>
-            <p className={`mt-1 text-2xl font-semibold tabular-nums ${r.margen >= 0 ? "" : "text-destructive"}`}>{formatRD(r.margen)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{Math.round(r.margenPct)}% · prom. {mesesEnRango(p.desde, p.hasta)} mes(es)</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm font-medium text-muted-foreground">Mayor gasto</p>
-            <p className="mt-1 text-lg font-semibold">{r.mayorGasto?.categoria ?? "—"}</p>
-            <p className="mt-1 text-sm tabular-nums text-muted-foreground">{r.mayorGasto ? formatRD(r.mayorGasto.monto) : ""}</p>
-          </Card>
-        </div>
-
-        {/* Gasto por categoría */}
-        {r.porCategoria.length > 0 && (
-          <Card className="mt-6 p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Gasto por categoría</h2>
-            <ul className="mt-4 space-y-2">
-              {r.porCategoria.map((c) => (
-                <li key={c.categoria} className="flex items-center justify-between gap-4 text-sm">
-                  <span>{c.categoria}</span>
-                  <span className="font-semibold tabular-nums">{formatRD(c.monto)}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
+        {/* Tarjetas interactivas + gasto por categoría (clic = detalle) */}
+        <FinanzasResumen
+          entro={r.entro}
+          salio={r.salio}
+          margen={r.margen}
+          margenPct={r.margenPct}
+          meses={mesesEnRango(p.desde, p.hasta)}
+          gastos={r.gastos}
+          ingresos={r.ingresos}
+          porCategoria={r.porCategoria}
+          mayorGasto={r.mayorGasto}
+        />
 
         {/* Tablas */}
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
