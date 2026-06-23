@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ChevronRight,
   Clock,
+  Gauge,
   Plus,
   Settings,
   Users,
@@ -16,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ESTADO_CITA_LABEL } from "@/lib/constants/citas";
-import { formatHoraRD } from "@/lib/format";
+import { formatFecha, formatHoraRD } from "@/lib/format";
 
 const estadoClase: Record<string, string> = {
   programada: "bg-brand-cyan/15 text-primary",
@@ -45,10 +46,18 @@ export type DashboardData = {
   proximaPaciente: string | null;
   pacientesActivos: number;
   agenda: AgendaItem[];
+  camaraEstado?: string | null;
+  proximoMantenimiento?: string | null;
   // Solo clínico:
   sesionesSemana?: number;
   alertas?: number;
   tendencia?: TendenciaDia[];
+};
+
+const CAMARA_LABEL: Record<string, string> = {
+  operativa: "Operativa",
+  en_mantenimiento: "En mantenimiento",
+  fuera_de_servicio: "Fuera de servicio",
 };
 
 function StatCard({
@@ -111,6 +120,8 @@ export function DashboardView(props: DashboardData) {
     proximaPaciente,
     pacientesActivos,
     agenda,
+    camaraEstado,
+    proximoMantenimiento,
     sesionesSemana,
     alertas,
     tendencia,
@@ -144,6 +155,9 @@ export function DashboardView(props: DashboardData) {
               </Button>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/pacientes">Pacientes</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/camara">Cámara</Link>
               </Button>
             </nav>
             <Button asChild variant="ghost" size="icon" aria-label="Configuración">
@@ -207,6 +221,40 @@ export function DashboardView(props: DashboardData) {
             pie="En el sistema"
             href="/pacientes"
           />
+
+          {camaraEstado && (
+            <Link href="/camara" className="block h-full">
+              <Card
+                className={`h-full p-6 transition-all duration-300 ease-breath hover:-translate-y-1 hover:shadow-lift ${
+                  camaraEstado !== "operativa" ? "border-amber-500/50" : ""
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-pill ${
+                      camaraEstado !== "operativa"
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                        : "bg-accent text-primary"
+                    }`}
+                  >
+                    <Gauge className="h-5 w-5" />
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="mt-4 text-sm font-medium text-muted-foreground">
+                  Cámara
+                </p>
+                <p className="mt-1 text-xl font-semibold tracking-tight">
+                  {CAMARA_LABEL[camaraEstado] ?? camaraEstado}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {proximoMantenimiento
+                    ? `Próx. mantenimiento: ${formatFecha(proximoMantenimiento)}`
+                    : "Sin mantenimiento programado"}
+                </p>
+              </Card>
+            </Link>
+          )}
 
           {esClinico ? (
             <>
