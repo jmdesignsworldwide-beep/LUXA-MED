@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clock,
   Plus,
+  Settings,
   Users,
   Wind,
 } from "lucide-react";
@@ -145,6 +146,11 @@ export function DashboardView(props: DashboardData) {
                 <Link href="/pacientes">Pacientes</Link>
               </Button>
             </nav>
+            <Button asChild variant="ghost" size="icon" aria-label="Configuración">
+              <Link href="/configuracion">
+                <Settings className="h-5 w-5" />
+              </Link>
+            </Button>
             <ThemeToggle />
           </div>
         </div>
