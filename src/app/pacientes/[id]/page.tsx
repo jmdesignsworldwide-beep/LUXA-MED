@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, Pencil, Plus, Stethoscope, Wind } from "lucide-react";
 
 import { cambiarEstadoPaciente } from "@/app/pacientes/[id]/actions";
+import { PortalEnlace } from "@/components/portal/portal-enlace";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CONTRAINDICACIONES_RELATIVAS } from "@/lib/constants/evaluacion";
@@ -109,6 +110,16 @@ export default async function FichaPacientePage({
       .order("fecha", { ascending: false });
     sesiones = (data ?? []) as SesionRow[];
   }
+
+  // Enlace activo del portal del paciente (lo gestiona cualquier personal).
+  const { data: enlacePortal } = await supabase
+    .from("portal_enlaces")
+    .select("ultimo_acceso")
+    .eq("paciente_id", params.id)
+    .eq("activo", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-secondary/40 via-background to-background">
@@ -342,6 +353,16 @@ export default async function FichaPacientePage({
             )}
           </div>
         )}
+
+        {/* Portal del paciente (acceso por enlace seguro) */}
+        <div className="mt-5">
+          <PortalEnlace
+            pacienteId={paciente.id}
+            pacienteNombre={paciente.nombre_completo}
+            tieneEnlace={Boolean(enlacePortal)}
+            ultimoAcceso={enlacePortal?.ultimo_acceso ?? null}
+          />
+        </div>
       </div>
     </main>
   );
