@@ -38,6 +38,7 @@ export function EscanerDocumento<T>({
   onResultado: (datos: T, campos: string[]) => void;
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const inputId = React.useId();
   const [estado, setEstado] = React.useState<"idle" | "cargando" | "ok" | "error">("idle");
   const [mensaje, setMensaje] = React.useState("");
   const [archivo, setArchivo] = React.useState("");
@@ -81,28 +82,33 @@ export function EscanerDocumento<T>({
           <p className="text-sm font-semibold">{etiqueta}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{descripcion}</p>
 
+          {/*
+            Input asociado a un <label> nativo (sin click programático ni
+            display:none). Así el evento onChange se dispara SIEMPRE, también en
+            Safari/iPhone. Se oculta con sr-only (sigue en el formulario para
+            enviarse al guardar).
+          */}
           <input
             ref={inputRef}
+            id={inputId}
             type="file"
             name={name}
             accept="image/*,.heic,.heif"
-            className="hidden"
+            className="sr-only"
             onChange={(e) => {
-              setArchivo(e.target.files?.[0]?.name ?? "");
+              const f = e.target.files?.[0];
+              setArchivo(f ? f.name || "imagen" : "");
               setEstado("idle");
               setMensaje("");
             }}
           />
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => inputRef.current?.click()}
-            >
-              <Upload className="h-4 w-4" />
-              {archivo ? "Cambiar imagen" : "Elegir / tomar foto"}
+            <Button asChild variant="outline" size="sm">
+              <label htmlFor={inputId} className="cursor-pointer">
+                <Upload className="h-4 w-4" />
+                {archivo ? "Cambiar imagen" : "Elegir / tomar foto"}
+              </label>
             </Button>
             <Button
               type="button"
