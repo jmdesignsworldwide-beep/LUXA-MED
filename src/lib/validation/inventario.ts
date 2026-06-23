@@ -17,9 +17,14 @@ const numPos = (msg: string) =>
 
 const fechaSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida");
 
+export const categoriaInsumoSchema = z.object({
+  nombre: z.string().trim().min(2, "El nombre es obligatorio").max(80),
+});
+
 export const insumoSchema = z.object({
   nombre: z.string().trim().min(2, "El nombre es obligatorio").max(160),
-  categoria: opc(z.string().trim().max(80)),
+  categoria_id: opc(z.string().trim().max(80)),
+  nueva_categoria: opc(z.string().trim().max(80)),
   unidad: z.string().trim().min(1).max(40),
   nivel_minimo: num("Nivel mínimo inválido"),
   costo_unitario: num("Costo inválido"),

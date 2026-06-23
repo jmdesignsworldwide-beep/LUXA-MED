@@ -61,11 +61,15 @@ export default async function InsumoDetallePage({
 
   const { data: insumoRaw } = await supabase
     .from("insumos")
-    .select("id, nombre, categoria, unidad, stock, nivel_minimo, costo_unitario, proveedor, activo")
+    .select(
+      "id, nombre, categoria_id, unidad, stock, nivel_minimo, costo_unitario, proveedor, activo, categorias_insumo(nombre)",
+    )
     .eq("id", params.id)
     .maybeSingle();
   if (!insumoRaw) notFound();
-  const insumo = insumoRaw as Insumo;
+  const catRel = (insumoRaw as { categorias_insumo?: { nombre: string } | { nombre: string }[] | null }).categorias_insumo;
+  const categoriaNombre = Array.isArray(catRel) ? catRel[0]?.nombre ?? null : catRel?.nombre ?? null;
+  const insumo = { ...(insumoRaw as object), categoria: categoriaNombre } as Insumo;
 
   const { data: movsRaw } = await supabase
     .from("insumo_movimientos")

@@ -27,13 +27,17 @@ export default async function EditarInsumoPage({
     .maybeSingle();
   if (perfil?.role !== "admin") redirect(`/inventario/${params.id}`);
 
-  const { data } = await supabase
-    .from("insumos")
-    .select("id, nombre, categoria, unidad, nivel_minimo, costo_unitario, proveedor")
-    .eq("id", params.id)
-    .maybeSingle();
+  const [{ data }, { data: cats }] = await Promise.all([
+    supabase
+      .from("insumos")
+      .select("id, nombre, categoria_id, unidad, nivel_minimo, costo_unitario, proveedor")
+      .eq("id", params.id)
+      .maybeSingle(),
+    supabase.from("categorias_insumo").select("id, nombre").eq("activo", true).order("nombre"),
+  ]);
   if (!data) notFound();
   const insumo = data as InsumoForm;
+  const categorias = cats ?? [];
 
   const action = editarInsumo.bind(null, insumo.id);
 
@@ -50,7 +54,7 @@ export default async function EditarInsumoPage({
         <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">Editar insumo</h1>
 
         <div className="mt-8 rounded-capsule border border-border/70 bg-card p-6 shadow-soft sm:p-8">
-          <InsumoFormulario action={action} insumo={insumo} />
+          <InsumoFormulario action={action} insumo={insumo} categorias={categorias} />
         </div>
       </div>
     </main>

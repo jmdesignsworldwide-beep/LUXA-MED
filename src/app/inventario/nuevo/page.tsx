@@ -23,6 +23,13 @@ export default async function NuevoInsumoPage() {
     .maybeSingle();
   if (perfil?.role !== "admin") redirect("/inventario");
 
+  const { data: cats } = await supabase
+    .from("categorias_insumo")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("nombre");
+  const categorias = cats ?? [];
+
   return (
     <main className="min-h-screen">
       <div className="container max-w-2xl py-10">
@@ -36,7 +43,7 @@ export default async function NuevoInsumoPage() {
         <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">Nuevo insumo</h1>
 
         <div className="mt-8 rounded-capsule border border-border/70 bg-card p-6 shadow-soft sm:p-8">
-          <InsumoFormulario action={crearInsumo} />
+          <InsumoFormulario action={crearInsumo} categorias={categorias} />
         </div>
       </div>
     </main>

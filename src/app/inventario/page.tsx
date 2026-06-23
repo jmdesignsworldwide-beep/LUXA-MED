@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertTriangle, Boxes, Package, Plus, Search } from "lucide-react";
+import { AlertTriangle, Boxes, Package, Plus, Search, Tags } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,23 +48,31 @@ export default async function InventarioPage({
 
   let query = supabase
     .from("insumos")
-    .select("id, nombre, categoria, unidad, stock, nivel_minimo, costo_unitario, proveedor, activo")
+    .select(
+      "id, nombre, categoria_id, unidad, stock, nivel_minimo, costo_unitario, proveedor, activo, categorias_insumo(nombre)",
+    )
     .eq("activo", true)
     .order("nombre");
   if (q) query = query.ilike("nombre", `%${q}%`);
-  if (categoria) query = query.eq("categoria", categoria);
+  if (categoria) query = query.eq("categoria_id", categoria);
 
+  type Fila = Insumo & {
+    categoria_id: string | null;
+    categorias_insumo: { nombre: string } | { nombre: string }[] | null;
+  };
   const { data } = await query;
-  const insumos = (data ?? []) as Insumo[];
+  const filas = (data ?? []) as unknown as Fila[];
+  const nombreCat = (x: Fila["categorias_insumo"]) =>
+    Array.isArray(x) ? x[0]?.nombre ?? null : x?.nombre ?? null;
+  const insumos = filas.map((f) => ({ ...f, categoria: nombreCat(f.categorias_insumo) }));
 
-  // Para el filtro de categorías necesitamos todas (no solo las filtradas).
-  const { data: todasCat } = await supabase
-    .from("insumos")
-    .select("categoria")
-    .eq("activo", true);
-  const categorias = Array.from(
-    new Set((todasCat ?? []).map((r) => r.categoria).filter((c): c is string => !!c)),
-  ).sort();
+  // Categorías para el filtro (de la tabla de categorías, no de los insumos).
+  const { data: cats } = await supabase
+    .from("categorias_insumo")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("nombre");
+  const categorias = cats ?? [];
 
   const valorTotal = insumos.reduce((a, i) => a + valorInsumo(i), 0);
   const conAlerta = insumos.filter(
@@ -80,11 +88,18 @@ export default async function InventarioPage({
             <p className="mt-1 text-sm text-muted-foreground">Insumos médicos y existencias</p>
           </div>
           {esAdmin && (
-            <Button asChild variant="vital">
-              <Link href="/inventario/nuevo">
-                <Plus className="h-4 w-4" /> Nuevo insumo
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/inventario/categorias">
+                  <Tags className="h-4 w-4" /> Gestionar categorías
+                </Link>
+              </Button>
+              <Button asChild variant="vital">
+                <Link href="/inventario/nuevo">
+                  <Plus className="h-4 w-4" /> Nuevo insumo
+                </Link>
+              </Button>
+            </div>
           )}
         </div>
 
@@ -144,7 +159,7 @@ export default async function InventarioPage({
               <Select id="categoria" name="categoria" defaultValue={categoria}>
                 <option value="">Todas</option>
                 {categorias.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
               </Select>
             </div>
