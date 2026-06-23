@@ -79,18 +79,24 @@ export default async function Home() {
   const hoy = hoyRD();
 
   // --- Datos visibles para TODOS los roles (RLS: pacientes y citas = is_staff) ---
-  const [{ data: citasRaw }, { count: pacientesActivos }] = await Promise.all([
-    supabase
-      .from("citas")
-      .select("id, paciente_id, inicio, fin, estado, pacientes(nombre_completo)")
-      .gte("inicio", `${hoy}T00:00:00${RD_OFFSET}`)
-      .lte("inicio", `${hoy}T23:59:59${RD_OFFSET}`)
-      .order("inicio", { ascending: true }),
-    supabase
-      .from("pacientes")
-      .select("id", { count: "exact", head: true })
-      .eq("activo", true),
-  ]);
+  const [{ data: citasRaw }, { count: pacientesActivos }, { data: camara }] =
+    await Promise.all([
+      supabase
+        .from("citas")
+        .select("id, paciente_id, inicio, fin, estado, pacientes(nombre_completo)")
+        .gte("inicio", `${hoy}T00:00:00${RD_OFFSET}`)
+        .lte("inicio", `${hoy}T23:59:59${RD_OFFSET}`)
+        .order("inicio", { ascending: true }),
+      supabase
+        .from("pacientes")
+        .select("id", { count: "exact", head: true })
+        .eq("activo", true),
+      supabase
+        .from("camara")
+        .select("estado, proximo_mantenimiento")
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   type CitaRaw = {
     id: string;
@@ -207,6 +213,8 @@ export default async function Home() {
         proximaPaciente={proximaPaciente}
         pacientesActivos={pacientesActivos ?? 0}
         agenda={agenda}
+        camaraEstado={camara?.estado ?? null}
+        proximoMantenimiento={camara?.proximo_mantenimiento ?? null}
         sesionesSemana={sesionesSemana}
         alertas={alertas}
         tendencia={tendencia}
