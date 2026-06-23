@@ -44,6 +44,11 @@ export default async function NuevaCitaPage({
           solape.
         </p>
 
+        {/*
+          PREPARADO (siguiente pieza, NO construir aún): alertas inteligentes al
+          agendar — avisar si el paciente tiene contraindicación ABSOLUTA o si la
+          cámara está en mantenimiento / fuera de servicio en esa fecha.
+        */}
         <div className="mt-8 rounded-capsule border border-border/70 bg-card p-6 shadow-soft sm:p-8">
           <CitaForm
             pacientes={pacientes ?? []}
