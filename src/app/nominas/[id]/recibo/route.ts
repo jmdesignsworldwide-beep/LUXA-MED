@@ -41,16 +41,23 @@ export async function GET(
     .eq("empleado_id", (pago as { empleado_id: string }).empleado_id)
     .maybeSingle();
 
-  const base64 = await generarReciboPDF({
-    empleadoNombre: emp?.nombre_completo ?? "Empleado",
-    empleadoCedula: priv?.cedula ?? null,
-    puesto: emp?.puesto ? PUESTO_LABEL[emp.puesto] ?? emp.puesto : null,
-    monto: Number((pago as { monto: number }).monto),
-    fechaPago: (pago as { fecha_pago: string }).fecha_pago,
-    periodo: (pago as { periodo: string }).periodo,
-    metodo: METODO_PAGO_LABEL[(pago as { metodo: string }).metodo] ?? (pago as { metodo: string }).metodo,
-    notas: (pago as { notas: string | null }).notas,
-  });
+  const logo = await fetch(new URL("/luxamed-logo.jpeg", req.url))
+    .then((r) => (r.ok ? r.arrayBuffer() : null))
+    .catch(() => null);
+
+  const base64 = await generarReciboPDF(
+    {
+      empleadoNombre: emp?.nombre_completo ?? "Empleado",
+      empleadoCedula: priv?.cedula ?? null,
+      puesto: emp?.puesto ? PUESTO_LABEL[emp.puesto] ?? emp.puesto : null,
+      monto: Number((pago as { monto: number }).monto),
+      fechaPago: (pago as { fecha_pago: string }).fecha_pago,
+      periodo: (pago as { periodo: string }).periodo,
+      metodo: METODO_PAGO_LABEL[(pago as { metodo: string }).metodo] ?? (pago as { metodo: string }).metodo,
+      notas: (pago as { notas: string | null }).notas,
+    },
+    logo,
+  );
 
   return new NextResponse(Buffer.from(base64, "base64"), {
     status: 200,
