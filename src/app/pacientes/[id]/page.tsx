@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Pencil, Stethoscope } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Stethoscope, Wind } from "lucide-react";
 
 import { cambiarEstadoPaciente } from "@/app/pacientes/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CONTRAINDICACIONES_RELATIVAS } from "@/lib/constants/evaluacion";
-import { formatFecha } from "@/lib/format";
+import { formatFecha, formatHoraRD } from "@/lib/format";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +44,12 @@ export default async function FichaPacientePage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { actualizado?: string; estado?: string; error?: string };
+  searchParams: {
+    actualizado?: string;
+    estado?: string;
+    error?: string;
+    sesion?: string;
+  };
 }) {
   if (!getSupabaseServerConfig().configured) redirect("/login");
   const supabase = createClient();
@@ -79,6 +84,30 @@ export default async function FichaPacientePage({
       (o) => o.label,
     );
     if (c.otros) ciRelativas.push(String(c.otros));
+  }
+
+  // Historial de sesiones (solo personal clínico).
+  type SesionRow = {
+    id: string;
+    fecha: string;
+    numero_sesion: number | null;
+    total_sesiones: number | null;
+    spo2_antes: number | null;
+    spo2_despues: number | null;
+    presion_ata: number | null;
+    duracion_min: number | null;
+    incidencias: string | null;
+  };
+  let sesiones: SesionRow[] = [];
+  if (esClinico) {
+    const { data } = await supabase
+      .from("sesiones")
+      .select(
+        "id, fecha, numero_sesion, total_sesiones, spo2_antes, spo2_despues, presion_ata, duracion_min, incidencias",
+      )
+      .eq("paciente_id", params.id)
+      .order("fecha", { ascending: false });
+    sesiones = (data ?? []) as SesionRow[];
   }
 
   return (
@@ -120,6 +149,11 @@ export default async function FichaPacientePage({
         {searchParams.actualizado === "1" && (
           <div className="mt-6 rounded-2xl border border-brand-cyan/30 bg-brand-cyan/10 px-4 py-3 text-sm font-medium text-primary">
             ✓ Cambios guardados.
+          </div>
+        )}
+        {searchParams.sesion === "1" && (
+          <div className="mt-6 rounded-2xl border border-brand-cyan/30 bg-brand-cyan/10 px-4 py-3 text-sm font-medium text-primary">
+            ✓ Sesión registrada.
           </div>
         )}
         {searchParams.estado && (
@@ -242,6 +276,72 @@ export default async function FichaPacientePage({
             <Dato label="Número de afiliado" value={paciente.ars_numero_afiliado} />
           </Seccion>
         </div>
+
+        {/* Historial de sesiones (solo personal clínico) */}
+        {esClinico && (
+          <div className="mt-5 rounded-capsule border border-border/70 bg-card p-6 shadow-soft">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <Wind className="h-4 w-4" />
+                Historial de sesiones ({sesiones.length})
+              </h2>
+              <Button asChild variant="vital" size="sm">
+                <Link href={`/pacientes/${paciente.id}/sesiones/nueva`}>
+                  <Plus className="h-4 w-4" />
+                  Registrar sesión
+                </Link>
+              </Button>
+            </div>
+
+            {sesiones.length === 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Aún no hay sesiones registradas.
+              </p>
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <th className="px-3 py-2 font-medium">Fecha</th>
+                      <th className="px-3 py-2 font-medium">Sesión</th>
+                      <th className="px-3 py-2 font-medium">SpO2 (antes→después)</th>
+                      <th className="px-3 py-2 font-medium">ATA</th>
+                      <th className="px-3 py-2 font-medium">Dur.</th>
+                      <th className="px-3 py-2 font-medium">Incidencia</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sesiones.map((s) => (
+                      <tr key={s.id} className="border-b border-border/40 last:border-0">
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {formatFecha(s.fecha)} {formatHoraRD(s.fecha)}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {s.numero_sesion ?? "—"}
+                          {s.total_sesiones ? ` de ${s.total_sesiones}` : ""}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {s.spo2_antes ?? "—"} → {s.spo2_despues ?? "—"}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">{s.presion_ata ?? "—"}</td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {s.duracion_min ? `${s.duracion_min}m` : "—"}
+                        </td>
+                        <td className="px-3 py-2">
+                          {s.incidencias ? (
+                            <span className="text-destructive">Sí</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </main>
   );
