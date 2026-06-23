@@ -36,10 +36,18 @@ function Guardar({ label }: { label: string }) {
   );
 }
 
-export function GastoForm({ categorias }: { categorias: { id: string; nombre: string }[] }) {
+export function GastoForm({
+  categorias,
+  subcats = {},
+}: {
+  categorias: { id: string; nombre: string }[];
+  subcats?: Record<string, { id: string; nombre: string }[]>;
+}) {
   const [state, formAction] = useFormState<FinanzasState, FormData>(registrarGasto, { ok: false });
   const errors = state.errors;
   const [cat, setCat] = React.useState("");
+  const [sub, setSub] = React.useState("");
+  const subOpciones = cat && cat !== "nueva" ? subcats[cat] ?? [] : [];
   return (
     <form action={formAction} className="space-y-5">
       {state.message && !state.ok && (
@@ -65,7 +73,10 @@ export function GastoForm({ categorias }: { categorias: { id: string; nombre: st
           id="categoria_id"
           name="categoria_id"
           value={cat}
-          onChange={(e) => setCat(e.target.value)}
+          onChange={(e) => {
+            setCat(e.target.value);
+            setSub("");
+          }}
         >
           <option value="" disabled>Elige una categoría…</option>
           {categorias.map((c) => (
@@ -81,6 +92,30 @@ export function GastoForm({ categorias }: { categorias: { id: string; nombre: st
           </div>
         )}
       </div>
+
+      {cat && (
+        <div className="space-y-2">
+          <Label htmlFor="subcategoria_id">Subcategoría (opcional)</Label>
+          <Select
+            id="subcategoria_id"
+            name="subcategoria_id"
+            value={sub}
+            onChange={(e) => setSub(e.target.value)}
+          >
+            <option value="">Sin subcategoría</option>
+            {subOpciones.map((s) => (
+              <option key={s.id} value={s.id}>{s.nombre}</option>
+            ))}
+            <option value="nueva">➕ Nueva subcategoría…</option>
+          </Select>
+          {sub === "nueva" && (
+            <div className="pt-1">
+              <Input name="nueva_subcategoria" placeholder="Nombre de la nueva subcategoría" autoFocus />
+              <Err id="nueva_subcategoria" errors={errors} />
+            </div>
+          )}
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="nota">Nota (opcional)</Label>
         <Textarea id="nota" name="nota" placeholder="Ej. factura de luz de junio" />

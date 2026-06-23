@@ -22,11 +22,15 @@ export default async function NuevoGastoPage() {
     .maybeSingle();
   if (perfil?.role !== "admin") redirect("/");
 
-  const { data: categorias } = await supabase
-    .from("categorias_gasto")
-    .select("id, nombre")
-    .eq("activo", true)
-    .order("nombre");
+  const [{ data: categorias }, { data: subcategorias }] = await Promise.all([
+    supabase.from("categorias_gasto").select("id, nombre").eq("activo", true).order("nombre"),
+    supabase.from("subcategorias_gasto").select("id, nombre, categoria_id").eq("activo", true).order("nombre"),
+  ]);
+
+  const subcats: Record<string, { id: string; nombre: string }[]> = {};
+  (subcategorias ?? []).forEach((s) => {
+    (subcats[s.categoria_id] ??= []).push({ id: s.id, nombre: s.nombre });
+  });
 
   return (
     <main className="min-h-screen">
@@ -36,7 +40,7 @@ export default async function NuevoGastoPage() {
         </Link>
         <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">Registrar gasto</h1>
         <div className="mt-8 rounded-capsule border border-border/70 bg-card p-6 shadow-soft sm:p-8">
-          <GastoForm categorias={categorias ?? []} />
+          <GastoForm categorias={categorias ?? []} subcats={subcats} />
         </div>
       </div>
     </main>

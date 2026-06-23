@@ -6,6 +6,7 @@ export type GastoFila = {
   id: string;
   fecha: string;
   categoria: string;
+  subcategoria: string | null;
   concepto: string;
   monto: number;
   editable: boolean; // las de nómina no se editan aquí
@@ -44,23 +45,24 @@ export async function resumenFinanciero(
   // Gastos manuales
   let gq = supabase
     .from("gastos")
-    .select("id, monto, fecha, nota, categorias_gasto(nombre)")
+    .select("id, monto, fecha, nota, categorias_gasto(nombre), subcategorias_gasto(nombre)")
     .gte("fecha", desde)
     .lte("fecha", hasta);
   if (categoriaIds.length > 0) gq = gq.in("categoria_id", categoriaIds);
   const { data: gm } = await gq;
-  const gastosManual: GastoFila[] = ((gm ?? []) as Record<string, unknown>[]).map((g) => {
-    const cat = g.categorias_gasto as { nombre: string } | { nombre: string }[] | null;
-    const nombre = Array.isArray(cat) ? cat[0]?.nombre : cat?.nombre;
-    return {
-      id: g.id as string,
-      fecha: g.fecha as string,
-      categoria: nombre ?? "Sin categoría",
-      concepto: (g.nota as string) ?? "",
-      monto: Number(g.monto),
-      editable: true,
-    };
-  });
+  const unNombre = (v: unknown): string | null => {
+    const x = v as { nombre: string } | { nombre: string }[] | null;
+    return (Array.isArray(x) ? x[0]?.nombre : x?.nombre) ?? null;
+  };
+  const gastosManual: GastoFila[] = ((gm ?? []) as Record<string, unknown>[]).map((g) => ({
+    id: g.id as string,
+    fecha: g.fecha as string,
+    categoria: unNombre(g.categorias_gasto) ?? "Sin categoría",
+    subcategoria: unNombre(g.subcategorias_gasto),
+    concepto: (g.nota as string) ?? "",
+    monto: Number(g.monto),
+    editable: true,
+  }));
 
   // Nómina reflejada (si corresponde a la selección)
   let nominaFilas: GastoFila[] = [];
@@ -77,6 +79,7 @@ export async function resumenFinanciero(
         id: n.id as string,
         fecha: n.fecha_pago as string,
         categoria: "Nóminas",
+        subcategoria: null,
         concepto: `Pago a ${nombre ?? "empleado"}`,
         monto: Number(n.monto),
         editable: false,

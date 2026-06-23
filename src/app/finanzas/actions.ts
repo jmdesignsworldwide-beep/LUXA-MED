@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
-import { gastoSchema, ingresoSchema } from "@/lib/validation/finanzas";
+import { categoriaSchema, gastoSchema, ingresoSchema } from "@/lib/validation/finanzas";
 
 export type FinanzasState = {
   ok: boolean;
@@ -64,10 +64,36 @@ export async function registrarGasto(
     }
   }
 
+  // Resolver subcategoría (opcional; "nueva" la crea bajo la categoría).
+  let subcategoriaId: string | null = null;
+  if (d.subcategoria_id === "nueva") {
+    if (d.nueva_subcategoria) {
+      const { data: existeSub } = await supabase
+        .from("subcategorias_gasto")
+        .select("id")
+        .eq("categoria_id", categoriaId)
+        .ilike("nombre", d.nueva_subcategoria)
+        .maybeSingle();
+      if (existeSub?.id) {
+        subcategoriaId = existeSub.id as string;
+      } else {
+        const { data: subCreada } = await supabase
+          .from("subcategorias_gasto")
+          .insert({ categoria_id: categoriaId, nombre: d.nueva_subcategoria, created_by: user.id })
+          .select("id")
+          .single();
+        subcategoriaId = (subCreada?.id as string) ?? null;
+      }
+    }
+  } else if (d.subcategoria_id) {
+    subcategoriaId = d.subcategoria_id;
+  }
+
   const { error } = await supabase.from("gastos").insert({
     monto: d.monto,
     fecha: d.fecha,
     categoria_id: categoriaId,
+    subcategoria_id: subcategoriaId,
     nota: d.nota ?? null,
     origen: "manual",
     created_by: user.id,
@@ -109,4 +135,71 @@ export async function registrarIngreso(
   }
   revalidatePath("/finanzas");
   redirect("/finanzas?creado=ingreso");
+}
+
+/** Crear categoría madre (gestión). */
+export async function crearCategoria(
+  _prev: FinanzasState,
+  formData: FormData,
+): Promise<FinanzasState> {
+  if (!getSupabaseServerConfig().configured) return { ok: false, message: "Servicio no disponible." };
+  const parsed = categoriaSchema.safeParse({ nombre: formData.get("nombre") });
+  if (!parsed.success) return { ok: false, message: "Nombre de categoría inválido." };
+  const { supabase, user } = await admin();
+  const { error } = await supabase
+    .from("categorias_gasto")
+    .insert({ nombre: parsed.data.nombre, created_by: user.id });
+  if (error) {
+    if (error.code === "23505") return { ok: false, message: "Ya existe una categoría con ese nombre." };
+    return { ok: false, message: "No se pudo crear la categoría." };
+  }
+  revalidatePath("/finanzas/categorias");
+  return { ok: true, message: "Categoría creada." };
+}
+
+/** Crear subcategoría dentro de una categoría madre (gestión). */
+export async function crearSubcategoria(
+  categoriaId: string,
+  _prev: FinanzasState,
+  formData: FormData,
+): Promise<FinanzasState> {
+  if (!getSupabaseServerConfig().configured) return { ok: false, message: "Servicio no disponible." };
+  const parsed = categoriaSchema.safeParse({ nombre: formData.get("nombre") });
+  if (!parsed.success) return { ok: false, message: "Nombre inválido." };
+  const { supabase, user } = await admin();
+  const { error } = await supabase
+    .from("subcategorias_gasto")
+    .insert({ categoria_id: categoriaId, nombre: parsed.data.nombre, created_by: user.id });
+  if (error) {
+    if (error.code === "23505") return { ok: false, message: "Ya existe esa subcategoría." };
+    return { ok: false, message: "No se pudo crear la subcategoría." };
+  }
+  revalidatePath("/finanzas/categorias");
+  return { ok: true, message: "Subcategoría creada." };
+}
+
+/** Renombrar subcategoría (gestión). */
+export async function renombrarSubcategoria(id: string, formData: FormData): Promise<void> {
+  if (!getSupabaseServerConfig().configured) return;
+  const parsed = categoriaSchema.safeParse({ nombre: formData.get("nombre") });
+  if (!parsed.success) return;
+  const { supabase } = await admin();
+  await supabase.from("subcategorias_gasto").update({ nombre: parsed.data.nombre }).eq("id", id);
+  revalidatePath("/finanzas/categorias");
+  redirect("/finanzas/categorias?ok=1");
+}
+
+/** Borrar subcategoría (bloqueada si tiene gastos amarrados). */
+export async function borrarSubcategoria(id: string): Promise<void> {
+  if (!getSupabaseServerConfig().configured) return;
+  const { supabase } = await admin();
+  const { count } = await supabase
+    .from("gastos")
+    .select("id", { count: "exact", head: true })
+    .eq("subcategoria_id", id);
+  if ((count ?? 0) > 0) {
+    redirect("/finanzas/categorias?error=enuso");
+  }
+  await supabase.from("subcategorias_gasto").delete().eq("id", id);
+  redirect("/finanzas/categorias?ok=1");
 }

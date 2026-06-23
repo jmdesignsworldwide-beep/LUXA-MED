@@ -134,7 +134,12 @@ export default async function FinanzasPage({
 
         {/* Filtro multi-categoría (chips) */}
         <div className="mt-4">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Categorías de gasto</p>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Categorías de gasto</p>
+            <Link href="/finanzas/categorias" className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+              Gestionar categorías y subcategorías
+            </Link>
+          </div>
           <FiltroCategorias categorias={cats} seleccion={seleccion} />
         </div>
 

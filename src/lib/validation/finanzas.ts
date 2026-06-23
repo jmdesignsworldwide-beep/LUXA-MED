@@ -16,6 +16,9 @@ export const gastoSchema = z.object({
   // "nueva" indica crear categoría al vuelo con nueva_categoria.
   categoria_id: z.string().min(1, "Elige una categoría"),
   nueva_categoria: opc(z.string().trim().min(2, "Nombre muy corto").max(80)),
+  // subcategoría: vacío = ninguna; "nueva" = crear con nueva_subcategoria.
+  subcategoria_id: opc(z.string().min(1)),
+  nueva_subcategoria: opc(z.string().trim().min(2, "Nombre muy corto").max(80)),
   nota: opc(z.string().trim().max(1000)),
 });
 

@@ -15,7 +15,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { formatFecha, formatRD } from "@/lib/format";
 
-type GastoFila = { id: string; fecha: string; categoria: string; concepto: string; monto: number };
+type GastoFila = { id: string; fecha: string; categoria: string; subcategoria: string | null; concepto: string; monto: number };
 type IngresoFila = { id: string; fecha: string; concepto: string; monto: number };
 type Cat = { categoria: string; monto: number };
 type Anterior = { entro: number; salio: number; margen: number; porCategoria: Record<string, number> };
@@ -353,13 +353,15 @@ function DetalleCategoria({
   const total = gastos.reduce((a, g) => a + g.monto, 0);
   const pct = salioTotal > 0 ? Math.round((total / salioTotal) * 100) : 0;
 
-  // Agrupar por concepto (sub-tipo) dentro de la categoría.
+  // Agrupar por SUBCATEGORÍA dentro de la categoría.
   const mapa = new Map<string, number>();
   for (const g of gastos) {
-    const k = g.concepto?.trim() || "(sin concepto)";
+    const k = g.subcategoria?.trim() || "(sin subcategoría)";
     mapa.set(k, (mapa.get(k) ?? 0) + g.monto);
   }
-  const porConcepto = Array.from(mapa.entries()).map(([concepto, monto]) => ({ concepto, monto })).sort((a, b) => b.monto - a.monto);
+  const porSub = Array.from(mapa.entries())
+    .map(([nombre, monto]) => ({ nombre, monto }))
+    .sort((a, b) => b.monto - a.monto);
 
   return (
     <div className="space-y-5">
@@ -376,19 +378,20 @@ function DetalleCategoria({
         <MiniChart etiquetas={serieEtiquetas} valores={serieValores} />
       </div>
 
-      {porConcepto.length > 1 && (
-        <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Por concepto</p>
-          <ul className="space-y-1 text-sm">
-            {porConcepto.map((c) => (
-              <li key={c.concepto} className="flex justify-between gap-4">
-                <span>{c.concepto}</span>
-                <span className="font-semibold tabular-nums">{formatRD(c.monto)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Por subcategoría</p>
+        <ul className="space-y-1 text-sm">
+          {porSub.map((s) => (
+            <li key={s.nombre} className="flex justify-between gap-4">
+              <span>
+                {s.nombre}
+                {total > 0 && <span className="text-xs text-muted-foreground"> · {Math.round((s.monto / total) * 100)}%</span>}
+              </span>
+              <span className="font-semibold tabular-nums">{formatRD(s.monto)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Movimientos</p>
