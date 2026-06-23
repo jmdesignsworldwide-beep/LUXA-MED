@@ -1,5 +1,7 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   AlertTriangle,
   CalendarDays,
@@ -7,17 +9,15 @@ import {
   Clock,
   Gauge,
   Plus,
-  Settings,
   Users,
   Wind,
 } from "lucide-react";
 
-import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ESTADO_CITA_LABEL } from "@/lib/constants/citas";
 import { formatFecha, formatHoraRD } from "@/lib/format";
+import { cascadeContainer, riseIn } from "@/lib/motion";
 
 const estadoClase: Record<string, string> = {
   programada: "bg-brand-cyan/15 text-primary",
@@ -42,7 +42,7 @@ export type DashboardData = {
   nombre: string; // "Dr. Ángel" o "Ángel"
   rol: "admin" | "enfermera" | "recepcion";
   citasHoy: number;
-  proximaLabel: string | null; // "Próxima en 25 min" / "En curso ahora" / "a las 3:00 p. m."
+  proximaLabel: string | null;
   proximaPaciente: string | null;
   pacientesActivos: number;
   agenda: AgendaItem[];
@@ -60,6 +60,7 @@ const CAMARA_LABEL: Record<string, string> = {
   fuera_de_servicio: "Fuera de servicio",
 };
 
+/** Tarjeta de resumen (cada una es un ítem de la cascada). */
 function StatCard({
   icon: Icon,
   titulo,
@@ -75,16 +76,17 @@ function StatCard({
   href?: string;
   acento?: "alerta";
 }) {
+  const resalta = acento === "alerta" && Number(valor) > 0;
   const inner = (
     <Card
       className={`h-full p-6 transition-all duration-300 ease-breath ${
         href ? "hover:-translate-y-1 hover:shadow-lift" : ""
-      } ${acento === "alerta" && Number(valor) > 0 ? "border-amber-500/50" : ""}`}
+      } ${resalta ? "border-amber-500/50" : ""}`}
     >
       <div className="flex items-start justify-between">
         <div
           className={`flex h-11 w-11 items-center justify-center rounded-pill ${
-            acento === "alerta" && Number(valor) > 0
+            resalta
               ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
               : "bg-accent text-primary"
           }`}
@@ -101,12 +103,16 @@ function StatCard({
     </Card>
   );
 
-  return href ? (
-    <Link href={href} className="block h-full">
-      {inner}
-    </Link>
-  ) : (
-    inner
+  return (
+    <motion.div variants={riseIn} className="h-full">
+      {href ? (
+        <Link href={href} className="block h-full">
+          {inner}
+        </Link>
+      ) : (
+        inner
+      )}
+    </motion.div>
   );
 }
 
@@ -131,48 +137,18 @@ export function DashboardView(props: DashboardData) {
   const maxTendencia = Math.max(1, ...(tendencia ?? []).map((d) => d.count));
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-secondary/40 via-background to-background">
-      {/* Encabezado */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-pill bg-white p-1.5 shadow-soft">
-              <Image
-                src="/luxamed-logo.jpeg"
-                alt="LUXAMED Hiperbárica"
-                width={1172}
-                height={798}
-                className="h-7 w-auto"
-                priority
-              />
-            </div>
-            <Wordmark size="sm" />
-          </div>
-          <div className="flex items-center gap-2">
-            <nav className="hidden items-center gap-1 sm:flex">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/agenda">Agenda</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/pacientes">Pacientes</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/camara">Cámara</Link>
-              </Button>
-            </nav>
-            <Button asChild variant="ghost" size="icon" aria-label="Configuración">
-              <Link href="/configuracion">
-                <Settings className="h-5 w-5" />
-              </Link>
-            </Button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
-
+    <motion.main
+      variants={cascadeContainer}
+      initial="hidden"
+      animate="show"
+      className="min-h-screen"
+    >
       <div className="container py-10">
         {/* Saludo */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <motion.div
+          variants={riseIn}
+          className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+        >
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
               Panel
@@ -195,10 +171,13 @@ export function DashboardView(props: DashboardData) {
               </Link>
             </Button>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Tarjetas de resumen */}
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Tarjetas de resumen — TODAS entran con la misma cascada */}
+        <motion.div
+          variants={cascadeContainer}
+          className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <StatCard
             icon={CalendarDays}
             titulo="Citas de hoy"
@@ -223,37 +202,39 @@ export function DashboardView(props: DashboardData) {
           />
 
           {camaraEstado && (
-            <Link href="/camara" className="block h-full">
-              <Card
-                className={`h-full p-6 transition-all duration-300 ease-breath hover:-translate-y-1 hover:shadow-lift ${
-                  camaraEstado !== "operativa" ? "border-amber-500/50" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-pill ${
-                      camaraEstado !== "operativa"
-                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                        : "bg-accent text-primary"
-                    }`}
-                  >
-                    <Gauge className="h-5 w-5" />
+            <motion.div variants={riseIn} className="h-full">
+              <Link href="/camara" className="block h-full">
+                <Card
+                  className={`h-full p-6 transition-all duration-300 ease-breath hover:-translate-y-1 hover:shadow-lift ${
+                    camaraEstado !== "operativa" ? "border-amber-500/50" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div
+                      className={`flex h-11 w-11 items-center justify-center rounded-pill ${
+                        camaraEstado !== "operativa"
+                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                          : "bg-accent text-primary"
+                      }`}
+                    >
+                      <Gauge className="h-5 w-5" />
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <p className="mt-4 text-sm font-medium text-muted-foreground">
-                  Cámara
-                </p>
-                <p className="mt-1 text-xl font-semibold tracking-tight">
-                  {CAMARA_LABEL[camaraEstado] ?? camaraEstado}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {proximoMantenimiento
-                    ? `Próx. mantenimiento: ${formatFecha(proximoMantenimiento)}`
-                    : "Sin mantenimiento programado"}
-                </p>
-              </Card>
-            </Link>
+                  <p className="mt-4 text-sm font-medium text-muted-foreground">
+                    Cámara
+                  </p>
+                  <p className="mt-1 text-xl font-semibold tracking-tight">
+                    {CAMARA_LABEL[camaraEstado] ?? camaraEstado}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {proximoMantenimiento
+                      ? `Próx. mantenimiento: ${formatFecha(proximoMantenimiento)}`
+                      : "Sin mantenimiento programado"}
+                  </p>
+                </Card>
+              </Link>
+            </motion.div>
           )}
 
           {esClinico ? (
@@ -277,13 +258,15 @@ export function DashboardView(props: DashboardData) {
               />
             </>
           ) : null}
-        </div>
+        </motion.div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Agenda + tendencia */}
+        <motion.div
+          variants={riseIn}
+          className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3"
+        >
           {/* Agenda del día */}
-          <section
-            className={esClinico ? "lg:col-span-2" : "lg:col-span-3"}
-          >
+          <section className={esClinico ? "lg:col-span-2" : "lg:col-span-3"}>
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 <Clock className="h-4 w-4" />
@@ -375,8 +358,8 @@ export function DashboardView(props: DashboardData) {
               </Card>
             </section>
           )}
-        </div>
+        </motion.div>
       </div>
-    </main>
+    </motion.main>
   );
 }
