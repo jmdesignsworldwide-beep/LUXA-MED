@@ -9,6 +9,7 @@ import { HomeExperience } from "@/components/home-experience";
 import { RD_OFFSET, RD_TZ } from "@/lib/constants/citas";
 import { CONTRAINDICACIONES_RELATIVAS } from "@/lib/constants/evaluacion";
 import { hoyRD } from "@/lib/format";
+import { nivelAlerta } from "@/lib/inventario-datos";
 import { bienvenida, tratamientoMedico } from "@/lib/gender";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
@@ -79,24 +80,37 @@ export default async function Home() {
   const hoy = hoyRD();
 
   // --- Datos visibles para TODOS los roles (RLS: pacientes y citas = is_staff) ---
-  const [{ data: citasRaw }, { count: pacientesActivos }, { data: camara }] =
-    await Promise.all([
-      supabase
-        .from("citas")
-        .select("id, paciente_id, inicio, fin, estado, pacientes(nombre_completo)")
-        .gte("inicio", `${hoy}T00:00:00${RD_OFFSET}`)
-        .lte("inicio", `${hoy}T23:59:59${RD_OFFSET}`)
-        .order("inicio", { ascending: true }),
-      supabase
-        .from("pacientes")
-        .select("id", { count: "exact", head: true })
-        .eq("activo", true),
-      supabase
-        .from("camara")
-        .select("estado, proximo_mantenimiento")
-        .limit(1)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: citasRaw },
+    { count: pacientesActivos },
+    { data: camara },
+    { data: insumosRaw },
+  ] = await Promise.all([
+    supabase
+      .from("citas")
+      .select("id, paciente_id, inicio, fin, estado, pacientes(nombre_completo)")
+      .gte("inicio", `${hoy}T00:00:00${RD_OFFSET}`)
+      .lte("inicio", `${hoy}T23:59:59${RD_OFFSET}`)
+      .order("inicio", { ascending: true }),
+    supabase
+      .from("pacientes")
+      .select("id", { count: "exact", head: true })
+      .eq("activo", true),
+    supabase
+      .from("camara")
+      .select("estado, proximo_mantenimiento")
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("insumos")
+      .select("stock, nivel_minimo")
+      .eq("activo", true),
+  ]);
+
+  // Insumos en bajo stock (visible para todo el personal).
+  const insumosBajoStock = (insumosRaw ?? []).filter(
+    (i) => nivelAlerta(Number(i.stock), Number(i.nivel_minimo)) !== "ok",
+  ).length;
 
   type CitaRaw = {
     id: string;
@@ -215,6 +229,7 @@ export default async function Home() {
         agenda={agenda}
         camaraEstado={camara?.estado ?? null}
         proximoMantenimiento={camara?.proximo_mantenimiento ?? null}
+        insumosBajoStock={insumosBajoStock}
         sesionesSemana={sesionesSemana}
         alertas={alertas}
         tendencia={tendencia}

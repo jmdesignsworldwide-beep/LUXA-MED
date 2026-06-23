@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Boxes,
   Briefcase,
   CalendarDays,
   Gauge,
@@ -34,6 +35,7 @@ const ITEMS: NavItem[] = [
   { href: "/", label: "Inicio", icon: Home, exact: true },
   { href: "/agenda", label: "Agenda", icon: CalendarDays },
   { href: "/pacientes", label: "Pacientes", icon: Users },
+  { href: "/inventario", label: "Inventario", icon: Boxes },
   { href: "/empleados", label: "Empleados", icon: Briefcase },
   { href: "/nominas", label: "Nómina", icon: Wallet, adminOnly: true },
   { href: "/finanzas", label: "Finanzas", icon: LineChart, adminOnly: true },

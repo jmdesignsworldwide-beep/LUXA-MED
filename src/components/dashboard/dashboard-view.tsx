@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
+  Boxes,
   CalendarDays,
   ChevronRight,
   Clock,
@@ -48,6 +49,7 @@ export type DashboardData = {
   agenda: AgendaItem[];
   camaraEstado?: string | null;
   proximoMantenimiento?: string | null;
+  insumosBajoStock?: number;
   // Solo clínico:
   sesionesSemana?: number;
   alertas?: number;
@@ -124,6 +126,7 @@ export function DashboardView(props: DashboardData) {
     agenda,
     camaraEstado,
     proximoMantenimiento,
+    insumosBajoStock,
     sesionesSemana,
     alertas,
     tendencia,
@@ -231,6 +234,17 @@ export function DashboardView(props: DashboardData) {
                 </Card>
               </Link>
             </motion.div>
+          )}
+
+          {(insumosBajoStock ?? 0) > 0 && (
+            <StatCard
+              icon={Boxes}
+              titulo="Insumos bajo stock"
+              valor={insumosBajoStock ?? 0}
+              pie="Requieren reposición"
+              href="/inventario"
+              acento="alerta"
+            />
           )}
 
           {esClinico ? (
