@@ -122,7 +122,7 @@ export default async function FichaPacientePage({
     .maybeSingle();
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-secondary/40 via-background to-background">
+    <main className="min-h-screen">
       <div className="container max-w-4xl py-10">
         <Link
           href="/pacientes"

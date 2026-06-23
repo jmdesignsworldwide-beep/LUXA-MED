@@ -93,7 +93,7 @@ export default async function PacientesPage({
   ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-secondary/40 via-background to-background">
+    <main className="min-h-screen">
       {/* Encabezado */}
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="container flex h-16 items-center justify-between">

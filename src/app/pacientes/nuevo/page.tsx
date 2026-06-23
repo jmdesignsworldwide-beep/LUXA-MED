@@ -17,7 +17,7 @@ export default async function NuevoPacientePage() {
   if (!user) redirect("/login");
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-secondary/40 via-background to-background">
+    <main className="min-h-screen">
       <div className="container max-w-3xl py-10">
         <Link
           href="/pacientes"

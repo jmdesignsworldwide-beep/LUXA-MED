@@ -53,3 +53,12 @@ export async function iniciarSesion(
 
   redirect("/");
 }
+
+/** Cierra la sesión del personal y vuelve al login. */
+export async function cerrarSesion(): Promise<void> {
+  if (getSupabaseServerConfig().configured) {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+  }
+  redirect("/login");
+}
