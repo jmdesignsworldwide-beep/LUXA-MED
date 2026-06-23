@@ -38,7 +38,7 @@ export type TendenciaDia = { label: string; count: number };
 
 export type DashboardData = {
   saludo: string; // "Buenos días"
-  nombre: string; // "Dra. Marien" o "Marien"
+  nombre: string; // "Dr. Ángel" o "Ángel"
   rol: "admin" | "enfermera" | "recepcion";
   citasHoy: number;
   proximaLabel: string | null; // "Próxima en 25 min" / "En curso ahora" / "a las 3:00 p. m."

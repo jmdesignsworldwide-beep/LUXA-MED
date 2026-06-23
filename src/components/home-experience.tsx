@@ -17,9 +17,11 @@ const SESSION_KEY = "luxamed:welcome:shown";
  */
 export function HomeExperience({
   nombre,
+  saludo = "Bienvenido",
   children,
 }: {
   nombre: string;
+  saludo?: string;
   children: React.ReactNode;
 }) {
   const params = useSearchParams();
@@ -50,7 +52,11 @@ export function HomeExperience({
       {children}
       <AnimatePresence>
         {showWelcome && (
-          <WelcomeScreen nombre={nombre} onDone={() => setShowWelcome(false)} />
+          <WelcomeScreen
+            nombre={nombre}
+            saludo={saludo}
+            onDone={() => setShowWelcome(false)}
+          />
         )}
       </AnimatePresence>
     </>

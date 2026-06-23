@@ -16,9 +16,11 @@ import { breath, DURATION, SPRING } from "@/lib/motion";
  */
 export function WelcomeScreen({
   nombre,
+  saludo = "Bienvenido",
   onDone,
 }: {
   nombre: string;
+  saludo?: string;
   onDone: () => void;
 }) {
   const reduced = useReducedMotion() ?? false;
@@ -102,7 +104,7 @@ export function WelcomeScreen({
           delay={0.7}
           className="mt-8 text-lg text-white/80 sm:text-xl"
         >
-          Bienvenida,{" "}
+          {saludo},{" "}
           <span className="text-2xl font-semibold text-white sm:text-3xl">
             {nombre}
           </span>

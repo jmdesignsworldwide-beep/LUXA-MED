@@ -23,7 +23,7 @@ export const roleSchema = z.enum(ROLE_VALUES);
 /** Personal clínico: ve diagnósticos, historia clínica y sesiones. */
 export const CLINICAL_ROLES: Role[] = ["admin", "enfermera"];
 
-/** Quién ESCRIBE diagnósticos / historia clínica: solo admin (la doctora-dueña). */
+/** Quién ESCRIBE diagnósticos / historia clínica: solo admin (el médico-dueño). */
 export const DIAGNOSIS_WRITER_ROLES: Role[] = ["admin"];
 
 /** Recepción NUNCA está aquí: no ve diagnósticos ni historia clínica. */

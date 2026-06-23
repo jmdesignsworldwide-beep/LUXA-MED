@@ -9,6 +9,7 @@ import { HomeExperience } from "@/components/home-experience";
 import { RD_OFFSET, RD_TZ } from "@/lib/constants/citas";
 import { CONTRAINDICACIONES_RELATIVAS } from "@/lib/constants/evaluacion";
 import { hoyRD } from "@/lib/format";
+import { bienvenida, tratamientoMedico } from "@/lib/gender";
 import { createClient, getSupabaseServerConfig } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,7 @@ export default async function Home() {
 
   const { data: perfil } = await supabase
     .from("user_profiles")
-    .select("role, nombre_completo")
+    .select("role, nombre_completo, genero")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -69,10 +70,11 @@ export default async function Home() {
     | "admin"
     | "enfermera"
     | "recepcion";
+  const genero = perfil?.genero as "M" | "F" | null | undefined;
   const esClinico = rol === "admin" || rol === "enfermera";
 
   const primerNombre = (perfil?.nombre_completo ?? "").trim().split(/\s+/)[0] || "";
-  const nombreSaludo = rol === "admin" ? `Dra. ${primerNombre}` : primerNombre;
+  const nombreSaludo = `${tratamientoMedico(genero, rol)}${primerNombre}`;
 
   const hoy = hoyRD();
 
@@ -195,10 +197,10 @@ export default async function Home() {
   }
 
   return (
-    <HomeExperience nombre={primerNombre || "LUXAMED"}>
+    <HomeExperience nombre={primerNombre || "LUXAMED"} saludo={bienvenida(genero)}>
       <DashboardView
         saludo={saludoRD()}
-        nombre={nombreSaludo || "Bienvenida"}
+        nombre={nombreSaludo || bienvenida(genero)}
         rol={rol}
         citasHoy={citas.length}
         proximaLabel={proximaLabel}
