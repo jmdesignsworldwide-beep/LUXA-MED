@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 
+import { Plus, Trash2 } from "lucide-react";
+
 import {
   registrarSesion,
   type SesionState,
@@ -16,6 +18,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type CitaOpt = { id: string; label: string };
+export type InsumoOpt = { id: string; nombre: string; unidad: string; stock: number };
 
 function ErrorMsg({ id, errors }: { id: string; errors?: Record<string, string[]> }) {
   const m = errors?.[id]?.[0];
@@ -46,16 +49,100 @@ function GuardarButton() {
   );
 }
 
+function MaterialPicker({ insumos }: { insumos: InsumoOpt[] }) {
+  const [filas, setFilas] = React.useState<{ key: number; insumoId: string; cantidad: string }[]>([]);
+  const idRef = React.useRef(1);
+  const porId = React.useMemo(() => new Map(insumos.map((i) => [i.id, i])), [insumos]);
+
+  const agregar = () =>
+    setFilas((f) => [...f, { key: idRef.current++, insumoId: "", cantidad: "1" }]);
+  const quitar = (key: number) => setFilas((f) => f.filter((x) => x.key !== key));
+  const set = (key: number, campo: "insumoId" | "cantidad", valor: string) =>
+    setFilas((f) => f.map((x) => (x.key === key ? { ...x, [campo]: valor } : x)));
+
+  if (insumos.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No hay insumos en el inventario todavía. (Opcional: puedes guardar la sesión sin material.)
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {filas.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          Si usaste material registrable, agrégalo aquí. Si no, deja vacío — el material es opcional.
+        </p>
+      )}
+      {filas.map((fila) => {
+        const ins = porId.get(fila.insumoId);
+        const cant = Number(fila.cantidad);
+        const excede = ins && Number.isFinite(cant) && cant > ins.stock;
+        return (
+          <div key={fila.key} className="space-y-1">
+            <div className="flex items-start gap-2">
+              <div className="flex-1">
+                <Select
+                  name="material_insumo_id"
+                  value={fila.insumoId}
+                  onChange={(e) => set(fila.key, "insumoId", e.target.value)}
+                >
+                  <option value="">Elige un insumo…</option>
+                  {insumos.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.nombre} — {i.stock} {i.unidad} disponibles
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <Input
+                name="material_cantidad"
+                type="number"
+                min={1}
+                step="0.01"
+                value={fila.cantidad}
+                onChange={(e) => set(fila.key, "cantidad", e.target.value)}
+                className="w-24"
+                aria-label="Cantidad"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => quitar(fila.key)}
+                aria-label="Quitar material"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            {excede && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Solo hay {ins?.stock} {ins?.unidad} disponibles.
+              </p>
+            )}
+          </div>
+        );
+      })}
+      <Button type="button" variant="outline" size="sm" onClick={agregar}>
+        <Plus className="h-4 w-4" /> Añadir material
+      </Button>
+    </div>
+  );
+}
+
 export function SesionForm({
   pacienteId,
   citas,
   defaultCitaId,
   defaults,
+  insumos,
 }: {
   pacienteId: string;
   citas: CitaOpt[];
   defaultCitaId: string;
   defaults: { numero_sesion: number; total_sesiones: string; presion_ata: string };
+  insumos: InsumoOpt[];
 }) {
   const [state, formAction] = useFormState<SesionState, FormData>(
     registrarSesion.bind(null, pacienteId),
@@ -129,6 +216,18 @@ export function SesionForm({
           <Textarea name="incidencias" placeholder="Sin incidencias / describir" />
         </Campo>
       </Bloque>
+
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Material utilizado (opcional)
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Lo que anotes aquí se descuenta del inventario. Si cancelas la sesión, el stock se devuelve.
+          </p>
+        </div>
+        <MaterialPicker insumos={insumos} />
+      </div>
 
       <div className="flex items-center gap-3 pt-1">
         <GuardarButton />
