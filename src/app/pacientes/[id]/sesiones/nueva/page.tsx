@@ -77,6 +77,19 @@ export default async function NuevaSesionPage({
     presion_ata: evaluacion?.presion_ata?.toString() ?? "",
   };
 
+  // Insumos activos para anotar el material usado (opcional).
+  const { data: insumosRaw } = await supabase
+    .from("insumos")
+    .select("id, nombre, unidad, stock")
+    .eq("activo", true)
+    .order("nombre");
+  const insumos = (insumosRaw ?? []).map((i) => ({
+    id: i.id as string,
+    nombre: i.nombre as string,
+    unidad: i.unidad as string,
+    stock: Number(i.stock),
+  }));
+
   return (
     <main className="min-h-screen">
       <div className="container max-w-2xl py-10">
@@ -98,6 +111,7 @@ export default async function NuevaSesionPage({
             citas={citas}
             defaultCitaId={defaultCitaId}
             defaults={defaults}
+            insumos={insumos}
           />
         </div>
       </div>

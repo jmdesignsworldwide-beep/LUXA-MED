@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, Pencil, Plus, Stethoscope, Wind } from "lucide-react";
 
 import { cambiarEstadoPaciente } from "@/app/pacientes/[id]/actions";
+import { cancelarSesion } from "@/app/pacientes/[id]/sesiones/nueva/actions";
 import { PortalEnlace } from "@/components/portal/portal-enlace";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -50,6 +51,7 @@ export default async function FichaPacientePage({
     estado?: string;
     error?: string;
     sesion?: string;
+    cancel?: string;
   };
 }) {
   if (!getSupabaseServerConfig().configured) redirect("/login");
@@ -100,6 +102,8 @@ export default async function FichaPacientePage({
     incidencias: string | null;
   };
   let sesiones: SesionRow[] = [];
+  // Material consumido por sesión: sesion_id -> ["Mascarilla ×1", ...]
+  const materialPorSesion = new Map<string, string[]>();
   if (esClinico) {
     const { data } = await supabase
       .from("sesiones")
@@ -109,6 +113,24 @@ export default async function FichaPacientePage({
       .eq("paciente_id", params.id)
       .order("fecha", { ascending: false });
     sesiones = (data ?? []) as SesionRow[];
+
+    if (sesiones.length > 0) {
+      const { data: movs } = await supabase
+        .from("insumo_movimientos")
+        .select("sesion_id, cantidad, insumo:insumos(nombre, unidad)")
+        .in("sesion_id", sesiones.map((s) => s.id));
+      for (const m of movs ?? []) {
+        const sid = (m as { sesion_id: string | null }).sesion_id;
+        if (!sid) continue;
+        const rel = (m as { insumo: { nombre: string; unidad: string } | { nombre: string; unidad: string }[] | null }).insumo;
+        const ins = Array.isArray(rel) ? rel[0] : rel;
+        if (!ins) continue;
+        const txt = `${ins.nombre} ×${Number((m as { cantidad: number }).cantidad)}`;
+        const arr = materialPorSesion.get(sid) ?? [];
+        arr.push(txt);
+        materialPorSesion.set(sid, arr);
+      }
+    }
   }
 
   // Enlace activo del portal del paciente (lo gestiona cualquier personal).
@@ -165,6 +187,16 @@ export default async function FichaPacientePage({
         {searchParams.sesion === "1" && (
           <div className="mt-6 rounded-2xl border border-brand-cyan/30 bg-brand-cyan/10 px-4 py-3 text-sm font-medium text-primary">
             ✓ Sesión registrada.
+          </div>
+        )}
+        {searchParams.cancel === "1" && (
+          <div className="mt-6 rounded-2xl border border-brand-cyan/30 bg-brand-cyan/10 px-4 py-3 text-sm font-medium text-primary">
+            ✓ Sesión cancelada. El material consumido se devolvió al inventario.
+          </div>
+        )}
+        {searchParams.cancel === "error" && (
+          <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            No se pudo cancelar la sesión. Solo un administrador puede hacerlo.
           </div>
         )}
         {searchParams.estado && (
@@ -318,35 +350,63 @@ export default async function FichaPacientePage({
                       <th className="px-3 py-2 font-medium">SpO2 (antes→después)</th>
                       <th className="px-3 py-2 font-medium">ATA</th>
                       <th className="px-3 py-2 font-medium">Dur.</th>
+                      <th className="px-3 py-2 font-medium">Material</th>
                       <th className="px-3 py-2 font-medium">Incidencia</th>
+                      {esAdmin && <th className="px-3 py-2 font-medium" />}
                     </tr>
                   </thead>
                   <tbody>
-                    {sesiones.map((s) => (
-                      <tr key={s.id} className="border-b border-border/40 last:border-0">
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {formatFecha(s.fecha)} {formatHoraRD(s.fecha)}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">
-                          {s.numero_sesion ?? "—"}
-                          {s.total_sesiones ? ` de ${s.total_sesiones}` : ""}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">
-                          {s.spo2_antes ?? "—"} → {s.spo2_despues ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">{s.presion_ata ?? "—"}</td>
-                        <td className="px-3 py-2 tabular-nums">
-                          {s.duracion_min ? `${s.duracion_min}m` : "—"}
-                        </td>
-                        <td className="px-3 py-2">
-                          {s.incidencias ? (
-                            <span className="text-destructive">Sí</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
+                    {sesiones.map((s) => {
+                      const material = materialPorSesion.get(s.id) ?? [];
+                      return (
+                        <tr key={s.id} className="border-b border-border/40 last:border-0">
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            {formatFecha(s.fecha)} {formatHoraRD(s.fecha)}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {s.numero_sesion ?? "—"}
+                            {s.total_sesiones ? ` de ${s.total_sesiones}` : ""}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {s.spo2_antes ?? "—"} → {s.spo2_despues ?? "—"}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">{s.presion_ata ?? "—"}</td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {s.duracion_min ? `${s.duracion_min}m` : "—"}
+                          </td>
+                          <td className="px-3 py-2">
+                            {material.length === 0 ? (
+                              <span className="text-muted-foreground">—</span>
+                            ) : (
+                              <span className="text-xs">{material.join(", ")}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            {s.incidencias ? (
+                              <span className="text-destructive">Sí</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          {esAdmin && (
+                            <td className="px-3 py-2 text-right">
+                              <ConfirmDialog
+                                triggerLabel="Cancelar"
+                                triggerVariant="ghost"
+                                title="¿Cancelar esta sesión?"
+                                description={
+                                  material.length > 0
+                                    ? `Se eliminará la sesión y se devolverá al inventario: ${material.join(", ")}.`
+                                    : "Se eliminará el registro de esta sesión. Esta acción no se puede deshacer."
+                                }
+                                confirmLabel="Sí, cancelar sesión"
+                                action={cancelarSesion.bind(null, s.id, params.id)}
+                              />
+                            </td>
                           )}
-                        </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
